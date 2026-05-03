@@ -48,7 +48,7 @@
                         <a href="https://www.facebook.com/apple.balbarino.54" target="_blank"><i class="fa-brands fa-facebook"></i></a>
                         </div>
                         <div class="btn-container" data-aos="zoom-out-left" data-aos-duration="1000" data-aos-delay="1300" style="display: flex; gap: 15px;">
-                            <button onclick="window.open('https://drive.google.com/file/d/1umWQe_SrAevOU6_oxLpjkw9x-vY-YTIa/view?usp=sharing', '_blank')">
+                            <button onclick="window.open('https://drive.google.com/file/d/1q9yAHRjyez9IEQqnId14IDGDHHnpOyzA/view?usp=sharing', '_blank')">
                             View My CV
                             </button>
                             <button onclick="window.open('https://drive.google.com/drive/folders/1hRWhEb1VXReRIT6FtrXP3p-DH8C6TFMl', '_blank')">
@@ -113,28 +113,40 @@
       <p>
         All of the resources you need to get your small business the help it needs. Spend less time working IN your business and more time working ON it.
       </p>
-      <a class="btn view-all" href="#"><i class="fa-solid fa-arrow-right"></i></a>
+      <span class="btn view-all" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
     </div>
 
     <!-- Right Grid of Cards -->
-    <div class="services-grid">
-      <div class="service-box" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200">
-        <img src="Virtual.png" alt="Virtual Assistant">
-        <h3>Virtual Assistance</h3>
+    <div class="services-cards-wrap">
+      <div class="services-grid" id="services-grid">
+        <div class="service-box is-visible" data-service-card data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200">
+          <img src="Social.png" alt="Social Media Manager">
+          <h3>Social Media Manager</h3>
+          <p>Creating and managing social media content that helps businesses stay visible, engage leads, and grow their online presence.</p>
+        </div>
+
+        <div class="service-box is-visible" data-service-card data-aos="fade-up" data-aos-duration="1000" data-aos-delay="300">
+          <img src="Virtual.png" alt="Virtual Assistance">
+          <h3>Virtual Assistance</h3>
         <p>If you need help with customer service, marketing, and admin tasks, you’ve come to the right place.</p>
       </div>
 
-      <div class="service-box" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="300">
-        <img src="Sales.png" alt="Sales Representative">
-        <h3>Sales Representative</h3>
-        <p>Driving sales growth through client relations and lead management.</p>
-      </div>
-
-      <div class="service-box" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="400">
+      <div class="service-box is-visible" data-service-card data-aos="fade-up" data-aos-duration="1000" data-aos-delay="400">
         <img src="Graphic.png" alt="Graphic Designer">
         <h3>Graphic Designer</h3>
         <p>Creating visually compelling designs to enhance branding and marketing.</p>
       </div>
+
+      <div class="service-box is-hidden" data-service-card data-aos="fade-up" data-aos-duration="1000" data-aos-delay="500">
+        <img src="Sales.png" alt="Sales Representative">
+        <h3>Sales Representative</h3>
+        <p>Driving sales growth through client relations and lead management.</p>
+        </div>
+      </div>
+
+      <button class="services-carousel-arrow" id="services-carousel-next" aria-label="Show next service">
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
     </div>
   </div>
 </section>
