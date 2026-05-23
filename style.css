@@ -986,3 +986,29 @@ section:first-of-type {
     zoom: 1.25;   /* Scale up content by 25% */
   }
 }
+
+@media print {
+  .dropdown,
+  .dropdown *,
+  .hamburg,
+  .cancel {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    transform: translateY(-9999px) !important;
+  }
+
+  .nav-container .links {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  nav {
+    overflow: hidden !important;
+  }
+}
