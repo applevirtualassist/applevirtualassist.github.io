@@ -1,50 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;700;800&display=swap');
-.image img {
-    width: 85%;      
-    height: auto;     
-    max-width: 700px; 
-    display: block;   
-    margin-left: 30px;
-    margin-top: 45px;
-}
-
-@media (min-width: 1440px) and (max-width: 1649px) {
-    .image img {
-        margin-left: 30px;  
-        margin-top: 45px;
-        max-width: 700px;
-        width: 85%;
-    }
-}
-
-@media (min-width: 1441px) {
-    .content button {
-        width: 120px;
-        white-space: nowrap;
-    }
-}
-
-@media (min-width: 1600px) {
-    .content button {
-        width: 120px;
-        white-space: nowrap;
-    }
-}
-
-@media (min-width: 1650px) {
-    .main-container .image {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-    
-    .main-container .image img {
-        margin: 45px auto 0;
-        max-width: 700px;
-        width: 85%;
-    }
-}
-
 *{
     padding: 0;
     margin: 0;
@@ -175,7 +129,7 @@ nav {
     height: auto;
     backdrop-filter: brightness(40%) blur(3px);
     box-shadow: 0 0 20px black;
-    transition: 0.2s linear; 
+    transition: 0.2s linear;
 }
 
 .dropdown .social-links a{
@@ -196,70 +150,69 @@ nav {
 section {
   width: 100%;
   height: auto;
-  min-height: 90vh;
+  min-height: 70vh;
   padding: 5rem 0;
 }
 
-section:first-of-type {
-  padding-top: 0rem; /* or 0 if you only want nav spacing */
+/* Hero: portrait-led proportions with a modest increase in body text size. */
+.hero-section {
+  min-height: 0;
+  padding: calc(max(10vh, 4.5rem) + clamp(1.5rem, 2vw, 2rem)) clamp(1.25rem, 4vw, 4rem) 0;
 }
 
-.main-container{
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: space-evenly;
-    align-items: center;
-    margin-top: 10vh; /* keeps the visual spacing */
+.main-container {
+  width: 100%;
+  max-width: 100rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(2rem, 3vw, 4rem);
 }
 
-.main-container .image{
-    width: 50%;
+.main-container .image {
+  min-width: 0;
+  width: 100%;
+  max-width: 43.75rem;
+  justify-self: center;
 }
 
-
-.main-container .content{
-    color: rgb(154, 131, 101);
-    width: 50%;
-    min-height: 100px;
-    margin-left: -40px; /* Move content to the left */
+.main-container .image img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
-
-.content h1{
-    font-size: clamp(2rem, 2rem + 5vw, 3rem);
+.main-container .content {
+  min-width: 0;
+  width: 100%;
+  color: rgb(154, 131, 101);
 }
 
-.content h1 span{
-    color: rgb(154, 131, 101);
+.content h1 {
+  font-size: clamp(2.2rem, 1.5rem + 2vw, 3rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
-.content .Typewriter{
-    font-weight: 600;
-    font-size: clamp(1rem, 1rem + 5vw, 2rem);
-    position: relative;
-    display: inline-block;
-    margin-top: 10px; /* space below the heading */
+.content .Typewriter {
+  font-weight: 600;
+  font-size: clamp(1.5rem, 1.125rem + 1.15vw, 2rem);
+  line-height: 1.4;
+  min-height: 1.4em;
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
 }
 
 .content .Typewriter span {
-  position: relative;
-  font-size: 2rem;
+  font-size: inherit;
   color: rgb(132, 103, 69);
   border-right: 2px solid rgb(132, 103, 69);
   text-shadow: 1px 1px 5px rgba(132, 103, 69,0.6);
-  padding-bottom: 6px;
-}
-
-.content .Typewriter span::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background: linear-gradient(to right, rgb(132, 103, 69), rgba(132, 103, 69,0));
-  border-radius: 3px;
+  padding-bottom: 0.2em;
+  background: linear-gradient(to right, rgb(132, 103, 69), rgba(132, 103, 69, 0)) left bottom / 100% 3px no-repeat;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 /* blinking cursor */
@@ -290,16 +243,32 @@ section:first-of-type {
     }
 }
 
-.content p{
-    font-family: 'Poppins', sans-serif; /* or any font you like */
-    font-size: clamp(0.8rem, 1vw + 0.5rem, 1rem); /* responsive size */
-    line-height: 1.4; /* adds spacing between lines */
-    color: rgb(154, 131, 101); /* subtle dark gray */
-    margin-top: 20px;
-    font-weight: 400; /* medium solid */
-    letter-spacing: 0.3px; /* tiny spacing for balance */
-    text-rendering: optimizeLegibility; /* smoother rendering */
-    -webkit-font-smoothing: antialiased;
+.content .hero-introduction {
+  max-width: 62ch;
+  margin-top: 1.25rem;
+  font-size: clamp(1.0625rem, 1rem + 0.125vw, 1.125rem);
+  line-height: 1.65;
+  color: rgb(110, 93, 73);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.content .social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.content .social-links i {
+  margin-top: 0;
+}
+
+.content .btn-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  margin-top: 1.5rem;
 }
 
 .social-links i{
@@ -325,19 +294,18 @@ section:first-of-type {
 }
 
 .content button{
-    width: 140px;
-    height: 47px; /* fixed size */
-    margin-top: 25px;
+    min-width: 9rem;
+    max-width: 100%;
+    min-height: 3rem;
     background-color: rgb(154, 131, 101);
     color: white;
-    border: none;
-    outline: none;
-    font-size: 0.9rem;
+    border: 2px solid transparent;
+    font-size: 0.9375rem;
     font-weight: 700;
     border-radius: 5px;
     transition: 0.2s linear;
-    padding: 5px 15px;
-    white-space: nowrap;
+    padding: 0.75rem 1.125rem;
+    cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -355,127 +323,240 @@ section:first-of-type {
 }
 
 
-/* Intro Highlight Section */
-.intro-highlight-section {
-  width: 100%;
-  min-height: auto;
-  padding: 60px 16px 90px;
-  background: rgba(244, 231, 209, 0.2);
+/* Career highlights */
+.career-highlights-section {
+  min-height: 0;
+  padding: clamp(72px, 7vw, 112px) 24px clamp(104px, 9vw, 160px);
 }
 
-.intro-highlight-container {
-  max-width: 1000px;
+.career-highlights-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 1.5vw, 24px);
+  margin-bottom: clamp(28px, 3vw, 44px);
+  color: rgb(110, 93, 73);
+  font-size: clamp(1.0625rem, 1.4vw, 1.625rem);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.career-highlights-heading::before,
+.career-highlights-heading::after {
+  content: "";
+  flex: 0 1 160px;
+  min-width: 60px;
+  height: 48px;
+  /* Decorative calligraphic curl; the opposite side mirrors the same drawing. */
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 48' fill='none'%3E%3Cpath d='M155 24C124 24 104 36 76 36C48 36 20 29 20 16C20 3 45 3 47 17C49 29 30 32 30 21C30 16 35 13 39 16' stroke='%23846745' stroke-opacity='.65' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.career-highlights-heading::after {
+  transform: scaleX(-1);
+}
+
+@media (max-width: 480px) {
+  .career-highlights-heading {
+    white-space: normal;
+  }
+
+  .career-highlights-heading span {
+    min-width: 0;
+  }
+}
+
+.career-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(20px, 2vw, 40px);
+  max-width: clamp(1100px, 78vw, 1600px);
   margin: 0 auto;
+  list-style: none;
   text-align: center;
 }
 
-.intro-highlight-container h2 {
-  font-size: clamp(1.7rem, 3vw, 3rem);
-  line-height: 1.25;
-  font-weight: 400;
-  color: rgb(154, 131, 101);
-  letter-spacing: 0.3px;
+.career-highlight {
+  position: relative;
+  height: 100%;
+  padding: clamp(32px, 2.5vw, 56px) 16px;
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.08));
+  box-shadow: 0 12px 32px rgba(154, 131, 101, 0.15),
+              0 0 40px rgba(154, 131, 101, 0.08);
+  cursor: default;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
 }
 
-#intro-before,
-#intro-after {
-  font-weight: 400;
-}
-
-#intro-cursor {
-  display: inline-block;
-  width: 3px;
-  height: 1em;
-  margin-left: 6px;
-  background: rgb(132, 103, 69);
-  transform: translateY(0.12em);
-  animation: introBlink 0.7s step-end infinite;
-}
-
-@keyframes introBlink {
-  0%, 100% {
-    opacity: 0;
-  }
-
-  50% {
-    opacity: 1;
-  }
+.career-highlight::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 25%;
+  width: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(132, 103, 69, 0.4), transparent);
 }
 
 .highlight-number {
-  display: inline-block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: flex-start;
+  font-size: clamp(3.75rem, 6vw, 7rem);
   font-weight: 700;
+  line-height: 1.12;
   color: rgb(132, 103, 69);
-  font-size: 1.08em;
-  text-shadow: 0 4px 14px rgba(132, 103, 69, 0.22);
-  background: linear-gradient(
-    to top,
-    rgba(154, 131, 101, 0.2) 0 38%,
-    transparent 38% 100%
-  );
+  text-shadow: 0 4px 18px rgba(132, 103, 69, 0.12);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.highlight-plus {
+  grid-column: 3;
+  justify-self: start;
+  margin-top: 0.12em;
+  margin-left: 0.04em;
+  font-size: 0.55em;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.highlight-number [data-count] {
+  grid-column: 2;
+  display: inline-block;
+  min-width: 1ch;
+  text-align: center;
+}
+
+.highlight-number [data-count="20"] {
+  min-width: 2ch;
+}
+
+.highlight-label {
+  display: block;
+  margin-top: 14px;
+  font-size: clamp(1.0625rem, 1.25vw, 1.375rem);
+  font-weight: 500;
+  line-height: 1.5;
+  color: rgb(110, 93, 73);
+}
+
+.highlight-label::before {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 2px;
+  margin: 0 auto 16px;
+  background: rgba(132, 103, 69, 0.35);
+}
+
+.highlight-accessible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* AOS only hides highlights after it has successfully initialized them. */
+.career-highlights-section [data-aos]:not(.aos-init) {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Keep the heading and cards ready for the same deliberate scroll entrance. */
+.career-highlights-section.career-highlights--waiting [data-aos] {
+  opacity: 0 !important;
+  transform: translateY(24px) !important;
+  transition: none !important;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .career-highlight:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 18px 38px rgba(154, 131, 101, 0.2),
+                0 0 44px rgba(154, 131, 101, 0.1);
+  }
+}
+
+@media (max-width: 600px) {
+  .career-highlights {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .career-highlights-section [data-aos],
+  .career-highlight {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* About Me: one padding boundary and a comfortable reading measure. */
+.about-section {
+  min-height: 0;
+  padding: 0 clamp(1.25rem, 4vw, 4rem) clamp(3rem, 5vw, 5rem);
+  scroll-margin-top: calc(max(10vh, 4.5rem) + 1.5rem);
 }
 
 .about-container {
-  max-width: 1100px;
+  width: 100%;
+  max-width: 80rem;
   margin: 0 auto;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
   align-items: center;
-  gap: 3vw;
-  flex-wrap: wrap;
+  gap: clamp(2rem, 5vw, 5rem);
 }
-.about-section {
-  padding-top: 200px;
-}
-
 
 .about-image {
-  position: relative;  /* pseudo-element relative to image */
-  display: inline-block; /* desktop version */
-  transform: translate(-25px, -15px);
+  width: 100%;
+  max-width: 26rem;
+  justify-self: center;
 }
 
 .about-image img {
-  width: 380px;
-  max-width: 100%;
+  width: 100%;
+  height: auto;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);
   display: block;
-  position: relative;
-  z-index: 1;
-}
-.about-text {
-  position: relative; /* anchor for absolute child */
 }
 
-/* Text */
 .about-text {
-  flex: 1;
-  position: relative;
-  top: -20px; /* adjust to align with image vertically */
+  min-width: 0;
+  width: 100%;
+  max-width: 65ch;
+  justify-self: center;
+  font-size: clamp(1.0625rem, 1rem + 0.15vw, 1.125rem);
 }
 
 .about-text h2 {
-  font-size: 2.2rem;
-  margin-bottom: 20px;
+  font-size: clamp(2rem, 1.5rem + 1vw, 2.5rem);
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
   color: rgb(154, 131, 101);
 }
 
 .about-text p {
-  font-family: 'Poppins', sans-serif;
-  font-size: clamp(0.8rem, 1vw + 0.5rem, 1rem);
-  line-height: 1.4;
-  color: rgb(154, 131, 101);
-  margin-top: 20px;
-  font-weight: 400;
-  letter-spacing: 0.3px;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
+  font-size: inherit;
+  line-height: 1.65;
+  color: rgb(110, 93, 73);
+  text-align: left;
+  overflow-wrap: anywhere;
 }
 
-/* NEW: lift the whole text block a bit so it aligns with the image */
-.about-text {
-  position: relative;
-  top: -20px; /* adjust the value to match the image height */
+.about-text p + p {
+  margin-top: 1.25rem;
 }
 .skills-section {
   padding-top: 0rem;
@@ -513,7 +594,7 @@ section:first-of-type {
     min-width: 210px;
     min-height: 170px;
 
-    transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), 
+    transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
                 box-shadow 0.35s ease-in-out;
     transform-origin: center center;
     z-index: 1;
@@ -775,9 +856,9 @@ section:first-of-type {
   transform: scale(1.2);
 }
 #contact-me {
-    min-height: auto;  
+    min-height: auto;
     height: auto;
-    padding-bottom: 40px; 
+    padding-bottom: 40px;
 }
 @media (max-width: 1100px) {
   .services-container { grid-template-columns: 1fr; } /* text on top, cards underneath */
@@ -828,91 +909,23 @@ section:first-of-type {
     }
 
     .main-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 30px;
-        height: auto;
-        overflow: visible;
-        padding-top: 80px;
+        grid-template-columns: minmax(0, 1fr);
+        max-width: 42rem;
+        gap: 2rem;
     }
 
     .main-container .image {
-        width: 100%;
-        display: flex;
+        max-width: 28rem;
+    }
+
+    .content h1,
+    .content .Typewriter {
+        text-align: center;
+    }
+
+    .content .social-links,
+    .content .btn-container {
         justify-content: center;
-        align-items: center;
-        margin: 0;
-    }
-
-    .main-container .image img {
-        width: 380px;
-        max-width: 100%;
-        height: auto;
-        margin: 0 auto;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-
-    .main-container .content {
-        width: 90%;
-        text-align: center;
-        margin: 0 auto;
-        padding: 0 20px;
-    }
-
-    .main-container .content h1 {
-        font-size: 2.2rem;
-        margin-bottom: 15px;
-        text-align: center;
-    }
-
-    .main-container .content .Typewriter {
-        font-size: 1.8rem;
-        margin: 15px 0;
-        text-align: center;
-    }
-
-    .main-container .content .Typewriter span {
-        font-size: 1.6rem;
-        display: inline-block;
-    }
-
-    .main-container .content p {
-        font-size: 1rem;
-        line-height: 1.6;
-        margin: 20px auto;
-        max-width: 600px;
-        text-align: left;
-    }
-
-    .main-container .content p br {
-        display: none;  /* Remove line breaks for better mobile flow */
-    }
-
-    .main-container .content .social-links {
-        display: flex;
-        justify-content: center;
-        gap: 20px;
-        margin: 25px 0;
-    }
-
-    .main-container .content .social-links i {
-        width: 2.8rem;
-        height: 2.8rem;
-        font-size: 1.6rem;
-    }
-
-    .main-container .content {
-        display: flex;
-        flex-direction: column;   /* stack elements vertically */
-        align-items: center;      /* center everything horizontally */
-    }
-
-    .main-container .content button {
-        margin: 10px 5px 0 5px;   /* small spacing between buttons */
-        width: auto;              /* let them size naturally */
-        min-width: 150px;         /* optional min width */
     }
 
     .nav-container .links {
@@ -928,58 +941,32 @@ section:first-of-type {
         color: white;
     }
 
-    /* ✅ Put these inside the same media query */
-    .about-section {
-        padding: 70px 0 45px;
+    .about-container {
+        grid-template-columns: minmax(0, 1fr);
+        max-width: 42rem;
+        gap: 2rem;
     }
 
-    .about-container {
-        flex-direction: column;
-        align-items: center; /* center everything horizontally */
-        gap: 24px;
-        padding: 0 18px;
+    .about-image {
+        max-width: 22rem;
+    }
+
+    .about-text h2 {
         text-align: center;
-  }
-
-  .about-text {
-    width: 100%;
-    max-width: 640px;
-    top: 0;
-    padding: 0 24px;
-  }
-
-  .about-text h2 {
-    margin-bottom: 18px;
-    text-align: center;
-  }
-
-  .about-text p {
-    max-width: 560px;
-    margin: 16px auto 0;
-    text-align: left;
-    line-height: 1.65;
-    font-size: 0.98rem;
-  }
-
-  .about-image {
-    display: block;      /* block-level so margin auto works */
-    width: 70%;          /* scale nicely */
-    margin: 0 auto;      /* center image */
-    transform: none;     /* cancel desktop offset */
-  }
-
-  .about-image img {
-    width: 100%;
-    max-width: 380px;
-    display: block;
-    margin: 0 auto;      /* center image */
-  }
+    }
 }
-    
+
     .service-box img {
         max-height: 300px;
     }
-    
+
+/* Reserve two title lines where the longest animated role needs to wrap. */
+@media (max-width: 30rem) {
+  .content .Typewriter {
+    min-height: 2.8em;
+  }
+}
+
 /* Target QHD and up */
 @media (min-width: 2560px) {
   body {

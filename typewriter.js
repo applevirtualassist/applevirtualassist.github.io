@@ -31,47 +31,114 @@ function erase() {
 }
 
 
-// INTRO HIGHLIGHT TYPEWRITER
-const introSection = document.querySelector(".intro-highlight-section");
-const introBefore = document.getElementById("intro-before");
-const introNumber = document.getElementById("intro-number");
-const introAfter = document.getElementById("intro-after");
-const introCursor = document.getElementById("intro-cursor");
+// CAREER HIGHLIGHTS: one shared clock keeps all three counters in sync.
+function initCareerHighlights() {
+    const section = document.querySelector(".career-highlights-section");
+    if (!section) return;
 
-const introParts = [
-    { element: introBefore, text: "Having worked with " },
-    { element: introNumber, text: "3+ clients" },
-    { element: introAfter, text: " as a Social Media Manager..." }
-];
+    const counters = Array.from(section.querySelectorAll("[data-count]"), element => ({
+        element,
+        target: Number(element.dataset.count)
+    }));
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-let introPartIndex = 0;
-let introCharIndex = 0;
-let introStarted = false;
+    // The HTML already contains the final, accessible values.
+    if (motionQuery.matches || !("IntersectionObserver" in window)) return;
 
-function typeIntro() {
-    if (!introBefore || !introNumber || !introAfter || !introCursor) return;
-
-    const currentPart = introParts[introPartIndex];
-
-    if (introCharIndex < currentPart.text.length) {
-        currentPart.element.textContent += currentPart.text[introCharIndex];
-        introCharIndex++;
-        setTimeout(typeIntro, 55);
-    } else if (introPartIndex < introParts.length - 1) {
-        introPartIndex++;
-        introCharIndex = 0;
-        setTimeout(typeIntro, 55);
+    const entranceElements = Array.from(section.querySelectorAll("[data-aos]"));
+    // AOS can initialize its elements after this handler on a cached reload.
+    // Gate as soon as the library is available; keep content visible if it failed to load.
+    if (window.AOS) {
+        section.classList.add("career-highlights--waiting");
     }
-}
 
-function startIntroTyping() {
-    if (introStarted) return;
+    let started = false;
+    let frameId;
+    let observer;
+    let scrollIntent = false;
+    // The existing large-screen body zoom can make the body scroll before the document.
+    const pageScrollY = () => window.scrollY + document.body.scrollTop;
+    let lastScrollY = pageScrollY();
+    const duration = 1800;
 
-    introStarted = true;
-    introBefore.textContent = "";
-    introNumber.textContent = "";
-    introAfter.textContent = "";
-    typeIntro();
+    counters.forEach(({ element }) => { element.textContent = "0"; });
+
+    function revealHighlights() {
+        entranceElements.forEach(element => element.classList.add("aos-animate"));
+        section.classList.remove("career-highlights--waiting");
+    }
+
+    function startCounters() {
+        if (started) return;
+        started = true;
+        observer.disconnect();
+        revealHighlights();
+        const startTime = performance.now();
+
+        function updateCounters(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            counters.forEach(({ element, target }) => {
+                element.textContent = String(Math.floor(progress * target));
+            });
+            if (progress < 1) frameId = requestAnimationFrame(updateCounters);
+        }
+
+        frameId = requestAnimationFrame(updateCounters);
+    }
+
+    function noteScrollIntent(event) {
+        if (event.type === "keydown") {
+            const target = event.target;
+            if (target.isContentEditable || target.matches("input, textarea, select")) return;
+            if (!["ArrowDown", "PageDown", "End", " "].includes(event.key)) return;
+        }
+        scrollIntent = true;
+    }
+
+    function removeScrollListeners() {
+        window.removeEventListener("wheel", noteScrollIntent);
+        window.removeEventListener("touchmove", noteScrollIntent);
+        window.removeEventListener("keydown", noteScrollIntent);
+        window.removeEventListener("scroll", observeAfterScroll, true);
+    }
+
+    function observeAfterScroll(event) {
+        if (event.target !== document && event.target !== document.body) return;
+        const currentScrollY = pageScrollY();
+        const movedDown = currentScrollY > lastScrollY;
+        lastScrollY = currentScrollY;
+        if (!scrollIntent || !movedDown) return;
+
+        removeScrollListeners();
+        observer = new IntersectionObserver(entries => {
+            if (entries.some(entry => entry.isIntersecting && entry.intersectionRatio >= 0.35)) {
+                startCounters();
+            }
+        }, { threshold: 0.35 });
+
+        // Observe individual items so even a short mobile viewport can trigger all counters.
+        section.querySelectorAll(".career-highlights > li").forEach(item => observer.observe(item));
+    }
+
+    // A tall viewport or restored scroll position must not start counting on refresh.
+    // Wait for intentional downward scrolling, then let visibility trigger the animation.
+    window.addEventListener("wheel", noteScrollIntent, { passive: true });
+    window.addEventListener("touchmove", noteScrollIntent, { passive: true });
+    window.addEventListener("keydown", noteScrollIntent);
+    window.addEventListener("scroll", observeAfterScroll, { passive: true, capture: true });
+
+    // Also honor a preference change while waiting or counting, without restarting.
+    motionQuery.addEventListener("change", event => {
+        if (!event.matches) return;
+        started = true;
+        removeScrollListeners();
+        if (observer) observer.disconnect();
+        cancelAnimationFrame(frameId);
+        revealHighlights();
+        counters.forEach(({ element, target }) => {
+            element.textContent = String(target);
+        });
+    });
 }
 
 
@@ -219,28 +286,9 @@ function initServicesCarousel() {
 }
 
 
-// START BOTH TYPEWRITERS
+// INITIALIZE PAGE INTERACTIONS
 document.addEventListener("DOMContentLoaded", () => {
     type();
     initServicesCarousel();
-
-    if (!introSection || !introBefore || !introNumber || !introAfter || !introCursor) return;
-
-    if (!("IntersectionObserver" in window)) {
-        startIntroTyping();
-        return;
-    }
-
-    const introObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                startIntroTyping();
-                observer.unobserve(entry.target);
-            }
-        });
-    }, {
-        threshold: 0.45
-    });
-
-    introObserver.observe(introSection);
+    initCareerHighlights();
 });
