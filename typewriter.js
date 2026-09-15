@@ -44,6 +44,7 @@ function initCareerHighlights() {
 
     // The HTML already contains the final, accessible values.
     if (motionQuery.matches || !("IntersectionObserver" in window)) return;
+    section.classList.add("career-highlights--ink-ready");
 
     const entranceElements = Array.from(section.querySelectorAll("[data-aos]"));
     // AOS can initialize its elements after this handler on a cached reload.
@@ -73,6 +74,7 @@ function initCareerHighlights() {
         started = true;
         observer.disconnect();
         revealHighlights();
+        section.classList.add("career-highlights--drawing");
         const startTime = performance.now();
 
         function updateCounters(now) {
@@ -135,9 +137,141 @@ function initCareerHighlights() {
         if (observer) observer.disconnect();
         cancelAnimationFrame(frameId);
         revealHighlights();
+        section.classList.remove("career-highlights--ink-ready", "career-highlights--drawing");
         counters.forEach(({ element, target }) => {
             element.textContent = String(target);
         });
+    });
+}
+
+
+// ABOUT: preserve the full layout and accessible copy while revealing visual letters.
+function initAboutAnimation() {
+    const text = document.querySelector(".about-text");
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (!text || motion.matches) return;
+
+    const paragraphs = Array.from(text.querySelectorAll("p"));
+    const letters = [];
+    let elapsed = 0;
+    const letterDelay = 7;
+
+    paragraphs.forEach(paragraph => {
+        const visual = document.createElement("span");
+        visual.setAttribute("aria-hidden", "true");
+        visual.innerHTML = paragraph.innerHTML;
+        const accessible = document.createElement("span");
+        accessible.className = "highlight-accessible";
+        accessible.textContent = paragraph.textContent;
+        const walker = document.createTreeWalker(visual, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+
+        nodes.forEach(node => {
+            if (node.parentElement.closest("[data-type-pause]")) elapsed += 260;
+            const fragment = document.createDocumentFragment();
+            node.textContent.split(/(\s+)/).filter(Boolean).forEach(part => {
+                const word = document.createElement("span");
+                if (!/^\s+$/.test(part)) word.className = "about-type-word";
+                for (const character of part) {
+                    const letter = document.createElement("span");
+                    letter.className = "about-type-pending";
+                    letter.textContent = character;
+                    word.append(letter);
+                    letters.push({ element: letter, time: elapsed });
+                    elapsed += letterDelay;
+                }
+                fragment.append(word);
+            });
+            node.replaceWith(fragment);
+        });
+        paragraph.replaceChildren(accessible, visual);
+        elapsed += 110;
+    });
+
+    let started = false;
+    let frame;
+    let visibilityTimer;
+    let nextLetter = 0;
+    const container = text.closest(".about-container");
+
+    function removeListeners() {
+        window.removeEventListener("scroll", checkVisibility, true);
+        window.removeEventListener("resize", checkVisibility);
+        container.removeEventListener("transitionend", checkVisibility);
+        clearTimeout(visibilityTimer);
+    }
+
+    function finish() {
+        started = true;
+        removeListeners();
+        cancelAnimationFrame(frame);
+        letters.forEach(({ element }) => element.classList.remove("about-type-pending"));
+        text.classList.remove("about-text--typing");
+    }
+
+    function isFullyInView() {
+        const rect = text.getBoundingClientRect();
+        const sectionRect = container.getBoundingClientRect();
+        const navBottom = document.querySelector("nav").getBoundingClientRect().bottom + 16;
+        const viewportBottom = window.innerHeight - 16;
+        const availableHeight = viewportBottom - navBottom;
+        if (window.AOS && !container.classList.contains("aos-animate")) return false;
+        if (sectionRect.height <= availableHeight) {
+            return sectionRect.top >= navBottom && sectionRect.bottom <= viewportBottom;
+        }
+        // On stacked mobile layouts the section is taller than the screen.
+        // Require the title and opening paragraph to be fully in the reading area.
+        const bottom = rect.height <= availableHeight
+            ? rect.bottom : paragraphs[0].getBoundingClientRect().bottom;
+        return rect.top >= navBottom && bottom <= viewportBottom;
+    }
+
+    function checkVisibility() {
+        clearTimeout(visibilityTimer);
+        if (started) return;
+        // Very short windows cannot fit even the opening paragraph. Keep the copy readable.
+        const openingHeight = paragraphs[0].getBoundingClientRect().bottom - text.getBoundingClientRect().top;
+        const readingHeight = window.innerHeight - document.querySelector("nav").getBoundingClientRect().bottom - 32;
+        if (openingHeight > readingHeight) { finish(); return; }
+        if (!isFullyInView()) return;
+        // Let scrolling settle so a brief pass through the section does not trigger it.
+        visibilityTimer = setTimeout(() => {
+            if (!isFullyInView()) return;
+            started = true;
+            removeListeners();
+            text.classList.add("about-text--typing");
+            const start = performance.now();
+            function reveal(now) {
+                while (nextLetter < letters.length && letters[nextLetter].time <= now - start) {
+                    letters[nextLetter++].element.classList.remove("about-type-pending");
+                }
+                if (nextLetter < letters.length) frame = requestAnimationFrame(reveal);
+            }
+            frame = requestAnimationFrame(reveal);
+        }, 180);
+    }
+
+    window.addEventListener("scroll", checkVisibility, { passive: true, capture: true });
+    window.addEventListener("resize", checkVisibility);
+    container.addEventListener("transitionend", checkVisibility);
+    motion.addEventListener("change", event => { if (event.matches) finish(); });
+    checkVisibility();
+}
+
+// Apply hover timing after AOS finishes, preserving each card's entrance timing.
+function initHoverTiming() {
+    document.querySelectorAll(".service-box, .skill-box").forEach(card => {
+        const observer = new MutationObserver(prepare);
+        function prepare() {
+            if (window.AOS && !card.classList.contains("aos-animate")) return;
+            observer.disconnect();
+            const duration = Number(card.dataset.aosDuration || 1000);
+            const delay = Number(card.dataset.aosDelay || 0);
+            setTimeout(() => card.classList.add("hover-ready"), window.AOS ? duration + delay : 0);
+        }
+        observer.observe(card, { attributes: true, attributeFilter: ["class"] });
+        prepare();
     });
 }
 
@@ -291,4 +425,6 @@ document.addEventListener("DOMContentLoaded", () => {
     type();
     initServicesCarousel();
     initCareerHighlights();
+    initAboutAnimation();
+    initHoverTiming();
 });

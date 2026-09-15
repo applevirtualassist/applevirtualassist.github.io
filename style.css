@@ -344,18 +344,35 @@ section {
   white-space: nowrap;
 }
 
-.career-highlights-heading::before,
-.career-highlights-heading::after {
-  content: "";
+.highlight-flourish {
   flex: 0 1 160px;
   min-width: 60px;
   height: 48px;
-  /* Decorative calligraphic curl; the opposite side mirrors the same drawing. */
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 48' fill='none'%3E%3Cpath d='M155 24C124 24 104 36 76 36C48 36 20 29 20 16C20 3 45 3 47 17C49 29 30 32 30 21C30 16 35 13 39 16' stroke='%23846745' stroke-opacity='.65' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
-.career-highlights-heading::after {
+.highlight-flourish--right {
   transform: scaleX(-1);
+}
+
+.highlight-flourish path {
+  fill: none;
+  stroke: rgb(132, 103, 69);
+  stroke-opacity: .65;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.career-highlights--ink-ready .highlight-flourish path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.career-highlights--drawing .highlight-flourish path {
+  animation: flourish-draw 2.2s cubic-bezier(.45, .05, .25, 1) .25s both;
+}
+
+@keyframes flourish-draw {
+  to { stroke-dashoffset: 0; }
 }
 
 @media (max-width: 480px) {
@@ -558,6 +575,21 @@ section {
 .about-text p + p {
   margin-top: 1.25rem;
 }
+
+.about-signature strong { font-weight: 800; }
+.about-type-word { white-space: nowrap; }
+.about-type-pending { visibility: hidden; }
+
+.about-text--typing h2 {
+  animation: about-title-hop 720ms cubic-bezier(.22, 1, .36, 1) 500ms both;
+}
+
+@keyframes about-title-hop {
+  0%, 100% { transform: translateY(0); }
+  38% { transform: translateY(-7px); }
+  65% { transform: translateY(1px); }
+  82% { transform: translateY(-2px); }
+}
 .skills-section {
   padding-top: 0rem;
 }
@@ -697,7 +729,7 @@ section {
 }
 
 .services-text p {
-  color: rgb(154, 131, 101); /* optional: match paragraph text too */
+  color: rgb(110, 93, 73);
   line-height: 1.6;
   margin-bottom: 20px;
 }
@@ -751,7 +783,7 @@ section {
 }
 .service-box h3 {
   margin: 18px;
-  color: rgb(132,103,69);
+  color: rgb(110, 93, 73);
   font-size: 1.1rem;
   min-height: 2.8em;
   display: flex;
@@ -974,7 +1006,46 @@ section {
   }
 }
 
+/* A short dwell on entry and a soft release make everyday hovers easier to see. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .career-highlight,
+  .portfolio-section .service-box.hover-ready[data-aos],
+  .portfolio-section .skill-box.hover-ready[data-aos],
+  .tool-icon-circle,
+  .view-all,
+  .services-carousel-arrow,
+  .services-carousel-arrow i,
+  .contact-me .social-links i {
+    transition-property: transform, scale, background-color, color, box-shadow, border-color, filter;
+    transition-duration: 550ms;
+    transition-timing-function: cubic-bezier(.22, .61, .36, 1);
+    transition-delay: 150ms;
+  }
+
+  .career-highlight:hover,
+  .portfolio-section .service-box.hover-ready[data-aos]:hover,
+  .portfolio-section .skill-box.hover-ready[data-aos]:hover,
+  .skill-box:hover .tool-icon-circle,
+  .view-all:hover,
+  .services-carousel-arrow:hover,
+  .services-carousel-arrow:hover i,
+  .contact-me .social-links i:hover {
+    transition-delay: 90ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .highlight-flourish path {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+  .about-text h2 { animation: none !important; }
+  .about-type-pending { visibility: visible; }
+}
+
 @media print {
+  .about-type-pending { visibility: visible !important; }
+  .highlight-flourish path { animation: none !important; stroke-dashoffset: 0 !important; }
   .dropdown,
   .dropdown *,
   .hamburg,
