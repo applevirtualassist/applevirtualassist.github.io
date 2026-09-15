@@ -492,3 +492,348 @@ document.addEventListener("DOMContentLoaded", () => {
     initAboutAnimation();
     initSectionReveals();
 });
+
+// MY WORKS: independent state for each gallery; no Services carousel globals.
+document.addEventListener("DOMContentLoaded", () => {
+    const section = document.getElementById("my-works");
+    if (!section) return;
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const hover = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const dialog = section.querySelector(".work-lightbox");
+    const controllers = [];
+    const dwell = 4500;
+    const duration = 850;
+    let modalOpen = false;
+
+    // Draw the shared Career Highlights motif when this heading's existing reveal starts.
+    const heading = section.querySelector(".my-works-heading");
+    if (!motion.matches && heading.classList.contains("reveal-pending")) {
+        heading.classList.add("my-works-heading--ink-ready");
+        const drawFlourish = event => {
+            if (event.target !== heading || event.animationName !== "section-reveal") return;
+            heading.classList.add("my-works-heading--drawing");
+            heading.removeEventListener("animationstart", drawFlourish);
+        };
+        heading.addEventListener("animationstart", drawFlourish);
+        motion.addEventListener("change", event => {
+            if (!event.matches) return;
+            heading.classList.remove("my-works-heading--ink-ready", "my-works-heading--drawing");
+            heading.removeEventListener("animationstart", drawFlourish);
+        });
+    }
+
+    section.querySelectorAll(".work-carousel").forEach(carousel => {
+        const track = carousel.querySelector(".work-track");
+        const slides = Array.from(track.children);
+        const name = document.getElementById(carousel.getAttribute("aria-labelledby")).textContent;
+        const controls = document.createElement("div");
+        controls.className = "work-controls";
+        function button(label, text, extraClass = "") {
+            const element = document.createElement("button");
+            element.type = "button";
+            element.className = `work-control ${extraClass}`.trim();
+            element.setAttribute("aria-label", label);
+            element.textContent = text;
+            return element;
+        }
+        const previous = button(`Previous ${name} item`, "\u2190");
+        const next = button(`Next ${name} item`, "\u2192");
+        const rotation = button(`Pause ${name} automatic sliding`, "Pause", "work-control--rotation");
+        const position = document.createElement("span");
+        position.className = "work-position";
+        position.setAttribute("aria-live", "off");
+        position.setAttribute("aria-atomic", "true");
+        controls.append(previous, position, next, rotation);
+        carousel.append(controls);
+        carousel.setAttribute("aria-roledescription", "carousel");
+        track.setAttribute("aria-label", `${name}: use left and right arrow keys or swipe to explore`);
+
+        let active = 0;
+        let visible = false;
+        let hovering = false;
+        let userPaused = false;
+        let animating = false;
+        let timer;
+        let settleTimer;
+        let idleUntil = 0;
+        let pointer = null;
+        let suppressClickUntil = 0;
+        const pausedVideos = new WeakSet();
+        const requestedVideos = new WeakSet();
+        const pendingVideos = new WeakSet();
+        const videos = slides.map(slide => slide.querySelector("video"));
+        const slots = slides.map((_, index) => relative(index, active));
+
+        function relative(index, center) {
+            const offset = (index - center + slides.length) % slides.length;
+            return offset > slides.length / 2 ? offset - slides.length : offset;
+        }
+        function schedule(delay = dwell) {
+            clearTimeout(timer);
+            const keyboardFocus = carousel.contains(document.activeElement) && document.activeElement.matches(":focus-visible");
+            if (!visible || document.hidden || modalOpen || motion.matches || userPaused || hovering || pointer || animating || keyboardFocus) return;
+            timer = setTimeout(() => move(1), Math.max(delay, idleUntil - performance.now()));
+        }
+        function canPlay(video, index) {
+            return visible && !document.hidden && !modalOpen && Math.abs(slots[index]) <= 1 &&
+                !pausedVideos.has(video) && (!motion.matches || (index === active && requestedVideos.has(video)));
+        }
+        function syncVideos() {
+            videos.forEach((video, index) => {
+                if (!video) return;
+                const play = canPlay(video, index);
+                // preload=none keeps all reels untouched until this row enters view.
+                video.autoplay = play;
+                if (visible && Math.abs(slots[index]) <= 1) video.preload = "metadata";
+                if (!play) { video.pause(); return; }
+                if (!video.paused || pendingVideos.has(video)) return;
+                pendingVideos.add(video);
+                video.play().then(() => {
+                    if (!canPlay(video, index)) video.pause();
+                }).catch(() => {
+                    // Autoplay restrictions leave the explicit Play reel control available.
+                }).finally(() => pendingVideos.delete(video));
+            });
+        }
+        function paint() {
+            slides.forEach((slide, index) => {
+                slide.style.setProperty("--work-slot", slots[index]);
+                slide.classList.toggle("work-slide--active", index === active);
+                slide.classList.toggle("work-slide--side", Math.abs(slots[index]) === 1);
+                slide.setAttribute("aria-hidden", String(index !== active));
+                slide.inert = index !== active;
+            });
+            position.textContent = `${String(active + 1).padStart(2, "0")} / ${String(slides.length).padStart(2, "0")}`;
+        }
+        function finishMove() {
+            if (!animating) return;
+            clearTimeout(settleTimer);
+            // Recycle only fully hidden cards. No cloned media and no visible loop reset.
+            slides.forEach((slide, index) => {
+                if (Math.abs(slots[index]) <= 1) return;
+                slide.classList.add("work-slide--reset");
+                slots[index] = relative(index, active);
+                slide.style.setProperty("--work-slot", slots[index]);
+            });
+            track.offsetHeight;
+            slides.forEach(slide => slide.classList.remove("work-slide--reset"));
+            animating = false;
+            hovering = hover.matches && slides[active].matches(":hover");
+            syncVideos();
+            schedule();
+        }
+        function move(direction, manual = false) {
+            if (animating || modalOpen) return;
+            clearTimeout(timer);
+            if (manual) idleUntil = performance.now() + 7000;
+            position.setAttribute("aria-live", manual ? "polite" : "off");
+            // Keep keyboard focus on a stable element before making the old slide inert.
+            if (slides[active].contains(document.activeElement)) track.focus({ preventScroll: true });
+            const destination = (active + direction + slides.length) % slides.length;
+            slides.forEach((slide, index) => {
+                const targetSlot = relative(index, destination);
+                if (Math.abs(slots[index]) > 1 && Math.abs(targetSlot) <= 1) {
+                    slide.classList.add("work-slide--reset");
+                    slots[index] = targetSlot + direction;
+                    slide.style.setProperty("--work-slot", slots[index]);
+                }
+            });
+            track.offsetHeight;
+            slides.forEach(slide => slide.classList.remove("work-slide--reset"));
+            active = destination;
+            slots.forEach((slot, index) => { slots[index] = slot - direction; });
+            animating = true;
+            hovering = false;
+            paint();
+            syncVideos();
+            if (motion.matches) finishMove();
+            else settleTimer = setTimeout(finishMove, duration + 50);
+        }
+
+        slides.forEach((slide, index) => {
+            slide.setAttribute("role", "group");
+            slide.setAttribute("aria-roledescription", "slide");
+            slide.setAttribute("aria-label", `${index + 1} of ${slides.length}`);
+            slide.addEventListener("pointerenter", event => {
+                if (!hover.matches || event.pointerType !== "mouse" || index !== active) return;
+                hovering = true;
+                clearTimeout(timer); // The reel itself keeps playing during hover.
+            });
+            slide.addEventListener("pointerleave", () => {
+                if (index !== active || !hovering) return;
+                hovering = false;
+                schedule(1000);
+            });
+            const video = videos[index];
+            if (!video) return;
+            video.controls = false;
+            video.muted = true;
+            const toggle = document.createElement("button");
+            toggle.type = "button";
+            toggle.className = "work-video-toggle";
+            const icon = document.createElement("i");
+            icon.setAttribute("aria-hidden", "true");
+            toggle.append(icon);
+            function updateToggle() {
+                icon.className = `fa-solid ${video.paused ? "fa-play" : "fa-pause"}`;
+                toggle.setAttribute("aria-label", `${video.paused ? "Play" : "Pause"} short-form video ${index + 1}`);
+            }
+            toggle.addEventListener("click", () => {
+                if (video.paused) {
+                    pausedVideos.delete(video);
+                    requestedVideos.add(video);
+                } else {
+                    pausedVideos.add(video);
+                    requestedVideos.delete(video);
+                }
+                idleUntil = performance.now() + 7000;
+                syncVideos();
+                schedule();
+            });
+            video.addEventListener("play", updateToggle);
+            video.addEventListener("pause", updateToggle);
+            updateToggle();
+            slide.append(toggle);
+        });
+        previous.addEventListener("click", () => move(-1, true));
+        next.addEventListener("click", () => move(1, true));
+        rotation.addEventListener("click", () => {
+            userPaused = !userPaused;
+            rotation.textContent = userPaused ? "Resume" : "Pause";
+            rotation.setAttribute("aria-label", `${userPaused ? "Resume" : "Pause"} ${name} automatic sliding`);
+            schedule();
+        });
+        carousel.addEventListener("focusin", () => schedule());
+        carousel.addEventListener("focusout", () => queueMicrotask(() => schedule()));
+        carousel.addEventListener("keydown", event => {
+            if (event.altKey || event.ctrlKey || event.metaKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+            event.preventDefault();
+            move(event.key === "ArrowRight" ? 1 : -1, true);
+        });
+        track.addEventListener("transitionend", event => {
+            if (event.target === slides[active] && event.propertyName === "transform") finishMove();
+        });
+        track.addEventListener("dragstart", event => event.preventDefault());
+        track.addEventListener("pointerdown", event => {
+            if (!event.isPrimary || event.button !== 0 || event.target.closest("button")) return;
+            pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, horizontal: false };
+            clearTimeout(timer);
+        });
+        track.addEventListener("pointermove", event => {
+            if (!pointer || pointer.id !== event.pointerId) return;
+            const dx = event.clientX - pointer.x;
+            const dy = event.clientY - pointer.y;
+            if (!pointer.horizontal && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+                pointer.horizontal = true;
+                track.setPointerCapture(event.pointerId);
+            }
+        });
+        function releasePointer(event) {
+            if (!pointer || pointer.id !== event.pointerId) return;
+            const gesture = pointer;
+            pointer = null;
+            if (track.hasPointerCapture(event.pointerId)) track.releasePointerCapture(event.pointerId);
+            idleUntil = performance.now() + 7000;
+            if (gesture.horizontal) {
+                suppressClickUntil = performance.now() + 400;
+                const dx = event.clientX - gesture.x;
+                if (event.type === "pointerup" && Math.abs(dx) > Math.min(60, track.clientWidth * .14)) move(dx < 0 ? 1 : -1, true);
+            }
+            schedule();
+        }
+        track.addEventListener("pointerup", releasePointer);
+        track.addEventListener("pointercancel", releasePointer);
+        track.addEventListener("lostpointercapture", event => {
+            // Touch starts with implicit capture on the image/video. Its bubbled
+            // release during handoff to the track must not end the swipe early.
+            if (event.target === track) releasePointer(event);
+        });
+        track.addEventListener("pointerleave", event => {
+            if (pointer && !pointer.horizontal) releasePointer(event);
+        });
+        track.addEventListener("click", event => {
+            if (performance.now() < suppressClickUntil) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        }, true);
+
+        function refresh() {
+            rotation.hidden = motion.matches;
+            if (motion.matches) finishMove();
+            syncVideos();
+            schedule();
+        }
+        paint();
+        carousel.classList.add("work-carousel--ready");
+        if ("IntersectionObserver" in window) {
+            const observer = new IntersectionObserver(entries => {
+                visible = entries[0].isIntersecting && entries[0].intersectionRatio >= .1;
+                refresh();
+            }, { threshold: [0, .1] });
+            observer.observe(track);
+        } else {
+            const checkVisibility = () => {
+                const rect = track.getBoundingClientRect();
+                visible = rect.bottom > 0 && rect.top < window.innerHeight;
+                refresh();
+            };
+            window.addEventListener("scroll", checkVisibility, { passive: true, capture: true });
+            window.addEventListener("resize", checkVisibility);
+            checkVisibility();
+        }
+        controllers.push(refresh);
+        refresh();
+    });
+
+    const refreshAll = () => controllers.forEach(refresh => refresh());
+    document.addEventListener("visibilitychange", refreshAll);
+    motion.addEventListener("change", refreshAll);
+
+    // Native dialog supplies Escape, modal focus containment, and inert background.
+    // The original image links remain useful if dialog support or scripting is absent.
+    if (!dialog || typeof dialog.showModal !== "function") return;
+    const expanded = dialog.querySelector(".work-lightbox-image");
+    const viewport = dialog.querySelector(".work-lightbox-viewport");
+    const zoom = dialog.querySelector(".work-lightbox-zoom");
+    let opener;
+    let previousOverflow;
+    section.querySelectorAll(".work-expand").forEach(link => {
+        link.setAttribute("aria-haspopup", "dialog");
+        link.addEventListener("click", event => {
+            if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            const original = link.querySelector("img");
+            expanded.src = original.src;
+            expanded.alt = original.alt;
+            dialog.querySelector("#work-lightbox-description").textContent = original.alt;
+            opener = link;
+            previousOverflow = [document.documentElement.style.overflow, document.body.style.overflow];
+            document.documentElement.style.overflow = "hidden";
+            document.body.style.overflow = "hidden";
+            modalOpen = true;
+            dialog.showModal();
+            refreshAll();
+        });
+    });
+    zoom.addEventListener("click", () => {
+        const zoomed = viewport.classList.toggle("work-lightbox-viewport--zoomed");
+        zoom.textContent = zoomed ? "Fit image" : "Zoom in";
+        zoom.setAttribute("aria-pressed", String(zoomed));
+        viewport.scrollTo(0, 0);
+        if (zoomed) viewport.focus({ preventScroll: true });
+    });
+    dialog.querySelector(".work-lightbox-close").addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
+    dialog.addEventListener("close", () => {
+        document.documentElement.style.overflow = previousOverflow[0];
+        document.body.style.overflow = previousOverflow[1];
+        modalOpen = false;
+        viewport.classList.remove("work-lightbox-viewport--zoomed");
+        zoom.textContent = "Zoom in";
+        zoom.setAttribute("aria-pressed", "false");
+        viewport.scrollTo(0, 0);
+        if (opener) opener.focus({ preventScroll: true });
+        refreshAll();
+    });
+});

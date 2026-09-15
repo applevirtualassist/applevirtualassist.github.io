@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
     <link rel="stylesheet" href="style.css">
+    <noscript><style>.btn-container[data-aos] { opacity: 1 !important; transform: none !important; pointer-events: auto !important; }</style></noscript>
     <title>Apple Balbarino Portfolio</title>
 </head>
 <body>
@@ -17,9 +18,10 @@
             <div class="links">
                 <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="100"><a href="#" onclick="scrollToTop(event)">Home</a></div>
                 <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200"><a href="#about">About Me</a></div>
-                <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="300"><a href="#services">Services</a></div>
-                <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="400"><a href="#skills">Skills</a></div>
-                <div class="link contact-btn" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="500"><a href="#contact-me">Contact Me</a></div>
+                <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="300"><a href="#my-works">My Works</a></div>
+                <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="400"><a href="#services">Services</a></div>
+                <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="500"><a href="#skills">Skills</a></div>
+                <div class="link contact-btn" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="600"><a href="#contact-me">Contact Me</a></div>
             </div>
         <i class="fa-solid fa-bars hamburg" onclick="hamburg()"></i>
         </div>
@@ -27,6 +29,7 @@
             <div class="social-links">
                 <a href="#"onclick="scrollToTop(event)">Home</a>
                 <a href="#about">About Me</a>
+                <a href="#my-works">My Works</a>
                 <a href="#services">Services</a>
                 <a href="#skills">Skills</a>
                 <a href="#contact-me">Contact Us</a>
@@ -51,9 +54,9 @@
                             <button onclick="window.open('https://drive.google.com/file/d/1q9yAHRjyez9IEQqnId14IDGDHHnpOyzA/view?usp=sharing', '_blank')">
                             View My CV
                             </button>
-                            <button onclick="window.open('https://drive.google.com/drive/folders/1hRWhEb1VXReRIT6FtrXP3p-DH8C6TFMl', '_blank')">
+                            <a class="works-button" href="#my-works">
                             View My Works
-                            </button>
+                            </a>
                         </div>
                 </div>
             </div>
@@ -111,6 +114,86 @@
               <p class="about-signature"><strong>A creative mind that turns ideas into results. <span data-type-pause>That’s me.</span></strong></p>
             </div>
           </div>
+        </section>
+        <!-- MY WORKS: native horizontal galleries enhanced by scoped carousel logic. -->
+        <section id="my-works" class="my-works portfolio-section" aria-labelledby="my-works-heading">
+          <div class="my-works-container">
+            <h2 id="my-works-heading" class="my-works-heading" data-scroll-reveal>
+              <svg class="highlight-flourish" viewBox="0 0 160 48" aria-hidden="true" focusable="false"><path pathLength="1" d="M155 24C124 24 104 36 76 36C48 36 20 29 20 16C20 3 45 3 47 17C49 29 30 32 30 21C30 16 35 13 39 16" /></svg>
+              <span>My Works</span>
+              <svg class="highlight-flourish highlight-flourish--right" viewBox="0 0 160 48" aria-hidden="true" focusable="false"><path pathLength="1" d="M155 24C124 24 104 36 76 36C48 36 20 29 20 16C20 3 45 3 47 17C49 29 30 32 30 21C30 16 35 13 39 16" /></svg>
+            </h2>
+
+            <div class="work-category">
+              <h3 id="work-video-heading" class="work-category-title" data-scroll-reveal>Short-Form Video</h3>
+              <div class="work-carousel" role="region" aria-labelledby="work-video-heading">
+                <div class="work-track" tabindex="0" aria-label="Short-form videos; scroll to explore">
+                  <figure class="work-slide">
+                    <video class="work-media" src="reel1.mp4" width="1080" height="1920" preload="none" muted loop playsinline controls aria-label="Short-form video 1, 831K+ views"></video>
+                    <figcaption class="work-views">831K+ views</figcaption>
+                  </figure>
+                  <figure class="work-slide">
+                    <video class="work-media" src="reel2.mp4" width="1080" height="1920" preload="none" muted loop playsinline controls aria-label="Short-form video 2, 549K+ views"></video>
+                    <figcaption class="work-views">549K+ views</figcaption>
+                  </figure>
+                  <figure class="work-slide">
+                    <video class="work-media" src="reel3.mp4" width="1080" height="1920" preload="none" muted loop playsinline controls aria-label="Short-form video 3, 403K+ views"></video>
+                    <figcaption class="work-views">403K+ views</figcaption>
+                  </figure>
+                  <figure class="work-slide">
+                    <video class="work-media" src="reel4.mp4" width="1080" height="1920" preload="none" muted loop playsinline controls aria-label="Short-form video 4, 390K+ views"></video>
+                    <figcaption class="work-views">390K+ views</figcaption>
+                  </figure>
+                  <figure class="work-slide">
+                    <video class="work-media" src="reel5.mp4" width="1080" height="1920" preload="none" muted loop playsinline controls aria-label="Short-form video 5, 268K+ views"></video>
+                    <figcaption class="work-views">268K+ views</figcaption>
+                  </figure>
+                </div>
+              </div>
+            </div>
+
+            <div class="work-category">
+              <h3 id="work-design-heading" class="work-category-title" data-scroll-reveal>Social Media Design</h3>
+              <div class="work-carousel" role="region" aria-labelledby="work-design-heading">
+                <div class="work-track" tabindex="0" aria-label="Social media designs; scroll to explore">
+                  <figure class="work-slide"><img class="work-media" src="SocialMedia1.webp" alt="Blue Chicago's North Shore market update design featuring a realtor and local landmarks" width="1080" height="1920" loading="lazy" decoding="async"></figure>
+                  <figure class="work-slide"><img class="work-media" src="SocialMedia2.webp" alt="Green North Shore monthly recap design for Caroline Gau with a handwritten-style local update" width="1080" height="1920" loading="lazy" decoding="async"></figure>
+                  <figure class="work-slide"><img class="work-media" src="SocialMedia3.webp" alt="Blush pink portrait collage introducing Dianne Meidie, a Greater Boston realtor" width="1080" height="1920" loading="lazy" decoding="async"></figure>
+                  <figure class="work-slide"><img class="work-media" src="SocialMedia4.webp" alt="North of Boston lifestyle design for Gayle Winters with a realtor stepping out of a phone" width="1080" height="1920" loading="lazy" decoding="async"></figure>
+                  <figure class="work-slide"><img class="work-media" src="SocialMedia5.webp" alt="North of Boston market update cover with a realtor on a tree-lined street and bold editorial lettering" width="1080" height="1920" loading="lazy" decoding="async"></figure>
+                </div>
+              </div>
+            </div>
+
+            <div class="work-category">
+              <div class="work-category-copy" data-scroll-reveal>
+                <h3 id="work-lead-heading" class="work-category-title">Content Management</h3>
+                <p class="work-category-hint">Click to view the details.</p>
+              </div>
+              <div class="work-carousel work-carousel--landscape" role="region" aria-labelledby="work-lead-heading">
+                <div class="work-track" tabindex="0" aria-label="Content Management screenshots; scroll to explore">
+                  <figure class="work-slide"><a class="work-expand" href="Lead1.webp" aria-label="Enlarge the real estate content overview and charts"><img class="work-media" src="Lead1.webp" alt="Real estate content dashboard with planned posts, workflow counts, and content distribution charts" width="2560" height="1440" loading="lazy" decoding="async"></a></figure>
+                  <figure class="work-slide"><a class="work-expand" href="Lead2.webp" aria-label="Enlarge the content tracker"><img class="work-media" src="Lead2.webp" alt="Content tracker spreadsheet organizing publish dates, topics, platforms, priorities, status, and calls to action" width="2560" height="1440" loading="lazy" decoding="async"></a></figure>
+                  <figure class="work-slide"><a class="work-expand" href="Lead3.webp" aria-label="Enlarge the smart content management"><img class="work-media" src="Lead3.webp" alt="September 2026 real estate content management scheduling reels, carousels, and stories by day" width="2560" height="1440" loading="lazy" decoding="async"></a></figure>
+                  <figure class="work-slide"><a class="work-expand" href="Lead4.webp" aria-label="Enlarge the content idea bank"><img class="work-media" src="Lead4.webp" alt="Real estate idea bank tracking content angles, pillars, formats, hooks, priorities, and readiness" width="2560" height="1440" loading="lazy" decoding="async"></a></figure>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <dialog class="work-lightbox" aria-labelledby="work-lightbox-title" aria-describedby="work-lightbox-description">
+            <div class="work-lightbox-content">
+              <div class="work-lightbox-toolbar">
+                <h3 id="work-lightbox-title">Content Management</h3>
+                <button type="button" class="work-lightbox-zoom" aria-pressed="false">Zoom in</button>
+                <button type="button" class="work-lightbox-close" aria-label="Close enlarged screenshot" autofocus>&times;</button>
+              </div>
+              <div class="work-lightbox-viewport" tabindex="0" role="region" aria-label="Screenshot; scroll to explore when zoomed">
+                <img class="work-lightbox-image" alt="" width="2560" height="1440">
+              </div>
+              <p id="work-lightbox-description"></p>
+            </div>
+          </dialog>
         </section>
     <section id="services" class="services-section portfolio-section">
   <div class="services-container">
@@ -263,9 +346,11 @@
 }
             document.querySelectorAll('.links a').forEach(link => {
                 link.addEventListener('click', e => {
+                    const href = link.getAttribute('href');
+                    if (href === '#') return; // Home already uses scrollToTop; '#' is not a selector.
                     e.preventDefault();
-                    const target = document.querySelector(link.getAttribute('href'));
-                    if (target) target.scrollIntoView({ behavior: 'smooth' });
+                    const target = document.querySelector(href);
+                    if (target) target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   });
 });
             function hamburg(){
