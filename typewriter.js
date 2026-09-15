@@ -193,7 +193,9 @@ function initAboutAnimation() {
     let frame;
     let visibilityTimer;
     let nextLetter = 0;
+    let titleStarted = false;
     const container = text.closest(".about-container");
+    const services = document.getElementById("services");
 
     function removeListeners() {
         window.removeEventListener("scroll", checkVisibility, true);
@@ -204,10 +206,11 @@ function initAboutAnimation() {
 
     function finish() {
         started = true;
+        titleStarted = true;
         removeListeners();
         cancelAnimationFrame(frame);
         letters.forEach(({ element }) => element.classList.remove("about-type-pending"));
-        text.classList.remove("about-text--typing");
+        text.classList.remove("about-text--typing", "about-text--title-animated");
     }
 
     function isFullyInView() {
@@ -227,9 +230,26 @@ function initAboutAnimation() {
         return rect.top >= navBottom && bottom <= viewportBottom;
     }
 
+    function startTyping() {
+        if (started) return;
+        started = true;
+        text.classList.add("about-text--typing");
+        const start = performance.now();
+        function reveal(now) {
+            while (nextLetter < letters.length && letters[nextLetter].time <= now - start) {
+                letters[nextLetter++].element.classList.remove("about-type-pending");
+            }
+            if (nextLetter < letters.length) frame = requestAnimationFrame(reveal);
+        }
+        frame = requestAnimationFrame(reveal);
+    }
+
     function checkVisibility() {
         clearTimeout(visibilityTimer);
-        if (started) return;
+        if (started && titleStarted) return;
+        const navBottom = document.querySelector("nav").getBoundingClientRect().bottom;
+        // Anchor jumps to Services, Skills or Contact also start the copy offscreen.
+        if (!started && services && services.getBoundingClientRect().top <= navBottom + 16) startTyping();
         // Very short windows cannot fit even the opening paragraph. Keep the copy readable.
         const openingHeight = paragraphs[0].getBoundingClientRect().bottom - text.getBoundingClientRect().top;
         const readingHeight = window.innerHeight - document.querySelector("nav").getBoundingClientRect().bottom - 32;
@@ -238,17 +258,11 @@ function initAboutAnimation() {
         // Let scrolling settle so a brief pass through the section does not trigger it.
         visibilityTimer = setTimeout(() => {
             if (!isFullyInView()) return;
-            started = true;
+            startTyping();
+            // Save the title's one-time hop for when About Me is actually in view.
+            titleStarted = true;
+            text.classList.add("about-text--title-animated");
             removeListeners();
-            text.classList.add("about-text--typing");
-            const start = performance.now();
-            function reveal(now) {
-                while (nextLetter < letters.length && letters[nextLetter].time <= now - start) {
-                    letters[nextLetter++].element.classList.remove("about-type-pending");
-                }
-                if (nextLetter < letters.length) frame = requestAnimationFrame(reveal);
-            }
-            frame = requestAnimationFrame(reveal);
         }, 180);
     }
 
@@ -259,19 +273,68 @@ function initAboutAnimation() {
     checkVisibility();
 }
 
-// Apply hover timing after AOS finishes, preserving each card's entrance timing.
-function initHoverTiming() {
-    document.querySelectorAll(".service-box, .skill-box").forEach(card => {
-        const observer = new MutationObserver(prepare);
-        function prepare() {
-            if (window.AOS && !card.classList.contains("aos-animate")) return;
-            observer.disconnect();
-            const duration = Number(card.dataset.aosDuration || 1000);
-            const delay = Number(card.dataset.aosDelay || 0);
-            setTimeout(() => card.classList.add("hover-ready"), window.AOS ? duration + delay : 0);
-        }
-        observer.observe(card, { attributes: true, attributeFilter: ["class"] });
-        prepare();
+function finishScrollReveal(element) {
+    element.classList.remove("reveal-pending", "reveal-entering");
+    element.classList.add("reveal-complete");
+}
+
+// Services and tools reveal when 30% of each item is in the reading area.
+// Observe the resting boxes: CSS translate does not move them until the reveal starts.
+function initSectionReveals() {
+    const elements = Array.from(document.querySelectorAll("[data-scroll-reveal]"));
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    document.querySelectorAll(".service-box, .skill-box").forEach(card => card.classList.add("hover-ready"));
+    if (motion.matches || !("IntersectionObserver" in window)) return;
+
+    const timers = new Map();
+    let observer;
+    elements.forEach(element => {
+        element.classList.add("reveal-pending");
+        element.addEventListener("animationend", event => {
+            if (event.target === element && event.animationName === "section-reveal") finishScrollReveal(element);
+        });
+    });
+
+    function observe() {
+        if (observer) observer.disconnect();
+        timers.forEach(timer => clearTimeout(timer));
+        timers.clear();
+        const navHeight = Math.ceil(document.querySelector("nav").getBoundingClientRect().bottom);
+        observer = new IntersectionObserver(entries => {
+            let stagger = 0;
+            entries.forEach(entry => {
+                const element = entry.target;
+                if (element.classList.contains("reveal-complete") || element.classList.contains("reveal-entering")) {
+                    observer.unobserve(element);
+                    return;
+                }
+                if (!entry.isIntersecting || entry.intersectionRatio < 0.3) {
+                    clearTimeout(timers.get(element));
+                    timers.delete(element);
+                    return;
+                }
+                if (timers.has(element)) return;
+                const delay = 120 + Math.min(stagger++, 3) * 70;
+                timers.set(element, setTimeout(() => {
+                    timers.delete(element);
+                    observer.unobserve(element);
+                    if (!element.classList.contains("reveal-complete")) element.classList.add("reveal-entering");
+                }, delay));
+            });
+        }, { threshold: [0, 0.3], rootMargin: `-${navHeight}px 0px 0px 0px` });
+        elements.filter(element => !element.classList.contains("reveal-complete") && !element.classList.contains("reveal-entering"))
+            .forEach(element => observer.observe(element));
+    }
+
+    observe();
+    window.addEventListener("resize", observe);
+    motion.addEventListener("change", event => {
+        if (!event.matches) return;
+        observer.disconnect();
+        timers.forEach(timer => clearTimeout(timer));
+        timers.clear();
+        window.removeEventListener("resize", observe);
+        elements.forEach(finishScrollReveal);
     });
 }
 
@@ -286,7 +349,7 @@ const servicesVisibleCount = 3;
 let servicesStartIndex = 0;
 let servicesAnimating = false;
 
-function setVisibleServices(forceAosDone = false) {
+function setVisibleServices(forceRevealDone = false) {
     if (!servicesGrid || serviceCards.length === 0) return;
 
     const visibleCount = Math.min(servicesVisibleCount, serviceCards.length);
@@ -303,8 +366,9 @@ function setVisibleServices(forceAosDone = false) {
         card.classList.toggle("is-hidden", !isVisible);
         card.style.order = isVisible ? visiblePosition + 1 : serviceCards.length + index;
 
-        if (forceAosDone && isVisible) {
-            card.classList.add("aos-animate");
+        if (forceRevealDone && isVisible) {
+            // The carousel supplies its own slide animation for newly selected cards.
+            finishScrollReveal(card);
         }
     });
 }
@@ -322,7 +386,7 @@ function showAllServicesStatic() {
 
     serviceCards.forEach((card, index) => {
         card.classList.remove("is-hidden");
-        card.classList.add("is-visible", "aos-animate");
+        card.classList.add("is-visible");
         card.style.order = index + 1;
         card.style.transition = "";
         card.style.transform = "";
@@ -426,5 +490,5 @@ document.addEventListener("DOMContentLoaded", () => {
     initServicesCarousel();
     initCareerHighlights();
     initAboutAnimation();
-    initHoverTiming();
+    initSectionReveals();
 });
