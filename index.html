@@ -16,24 +16,25 @@
                 <span>Apple Portfolio</span> 
             </div>
             <div class="links">
-                <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="100"><a href="#" onclick="scrollToTop(event)">Home</a></div>
+                <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="100"><a href="#">Home</a></div>
                 <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200"><a href="#about">About Me</a></div>
                 <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="300"><a href="#my-works">My Works</a></div>
                 <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="400"><a href="#services">Services</a></div>
                 <div class="link" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="500"><a href="#skills">Skills</a></div>
                 <div class="link contact-btn" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="600"><a href="#contact-me">Contact Me</a></div>
             </div>
-        <i class="fa-solid fa-bars hamburg" onclick="hamburg()"></i>
+            <button class="hamburg" type="button" aria-controls="mobile-navigation" aria-expanded="false" aria-label="Open navigation menu">
+                <i class="fa-solid fa-bars" aria-hidden="true"></i>
+            </button>
         </div>
-        <div class="dropdown">
+        <div class="dropdown" id="mobile-navigation" aria-hidden="true" inert>
             <div class="social-links">
-                <a href="#"onclick="scrollToTop(event)">Home</a>
+                <a href="#">Home</a>
                 <a href="#about">About Me</a>
                 <a href="#my-works">My Works</a>
                 <a href="#services">Services</a>
                 <a href="#skills">Skills</a>
                 <a href="#contact-me">Contact Us</a>
-                <i class="fa-solid fa-xmark cancel" onclick="cancel()"></i>
             </div>
         </div>
     </nav>
@@ -102,11 +103,11 @@
             
         <!-- ABOUT ME SECTION -->
         <section id="about" class="about-section portfolio-section">
-          <div class="about-container" data-aos="fade-up" data-aos-duration="1200" data-aos-delay="100">
+          <div class="about-container" data-scroll-anchor data-aos="fade-up" data-aos-duration="1200" data-aos-delay="100">
             <div class="about-image">
               <img src="image1.webp" alt="Apple Balbarino" width="1414" height="2000" />
             </div>
-            <div class="about-text">
+            <div class="about-text" data-scroll-anchor-mobile>
               <h2>About Me</h2>
               <p>I’m a graduate with a Bachelor’s degree in Technology Communication Management, major in Multimedia. My background in multimedia shapes how I approach content and design. I enjoy the creative process just as much as keeping the work behind it organized.</p>
               <p>My roles as a <strong>Social Media Manager, Real Estate VA, and Graphic Designer</strong> have taught me to adapt to different businesses and ways of working. I take the time to understand the task at hand and pay attention to the details that make the finished work feel complete.</p>
@@ -117,7 +118,7 @@
         </section>
         <!-- MY WORKS: native horizontal galleries enhanced by scoped carousel logic. -->
         <section id="my-works" class="my-works portfolio-section" aria-labelledby="my-works-heading">
-          <div class="my-works-container">
+          <div class="my-works-container" data-scroll-anchor>
             <h2 id="my-works-heading" class="my-works-heading" data-scroll-reveal>
               <svg class="highlight-flourish" viewBox="0 0 160 48" aria-hidden="true" focusable="false"><path pathLength="1" d="M155 24C124 24 104 36 76 36C48 36 20 29 20 16C20 3 45 3 47 17C49 29 30 32 30 21C30 16 35 13 39 16" /></svg>
               <span>My Works</span>
@@ -196,7 +197,7 @@
           </dialog>
         </section>
     <section id="services" class="services-section portfolio-section">
-  <div class="services-container">
+  <div class="services-container" data-scroll-anchor>
     <!-- Left Text Column -->
     <div class="services-text" data-scroll-reveal>
       <h2>Services I Offer</h2>
@@ -241,7 +242,7 @@
   </div>
 </section>
     <section id="skills" class="skills-section portfolio-section">
-        <div class="skills-heading" data-scroll-reveal>
+        <div class="skills-heading" data-scroll-anchor data-scroll-reveal>
             <h2>Creative & Productivity Tools</h2>
         </div>
     <div class="skills-grid">
@@ -313,21 +314,55 @@
         </div>
     </div>
 </section>
-    <section id="contact-me" class="contact-me-section portfolio-section">
-  <div class="contact-me" data-aos="fade-up" data-aos-duration="1500" data-aos-delay="100">
-    <h2>Contact Me</h2>
-    <p>Email: appleaejiemarieb@gmail.com</p>
-    <p>Phone: +63 993 985 6343</p>
-    <div class="social-links">
-      <a href="https://www.linkedin.com/in/apple-balbarino/" target="_blank">
-        <i class="fab fa-linkedin"></i>
-      </a>
-      <a href="https://www.facebook.com/apple.balbarino.54" target="_blank">
-        <i class="fab fa-facebook"></i>
-      </a>
-    </div>
-  </div>
-</section>
+    <section id="contact-me" class="contact-me-section portfolio-section" aria-labelledby="contact-heading">
+      <div class="contact-me" data-scroll-anchor>
+        <div class="contact-intro" data-contact-reveal>
+          <h2 id="contact-heading" class="contact-title">LET'S CONNECT</h2>
+          <svg class="contact-drawn-arrow" viewBox="0 0 240 144" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path class="contact-arrow-line" pathLength="1" d="M59 17C97 1 190 12 185 53C181 86 138 95 130 71C119 36 213 51 169 103C155 119 137 129 120 131" />
+            <path class="contact-arrow-tip" pathLength="1" d="M129 120L120 131L135 135" />
+          </svg>
+          <div class="contact-email-stage">
+            <div class="contact-email-reveal">
+              <button type="button" class="contact-email" data-copy-email="appleaejiemarieb@gmail.com" aria-label="Copy email address to clipboard" disabled>
+                <span>appleaejiemarieb@gmail.com</span>
+                <svg class="contact-email-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                  <g class="contact-copy-glyph"><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M15 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3" /></g>
+                  <path class="contact-copy-check" d="m5 12 4 4L19 6" />
+                </svg>
+              </button>
+              <span class="contact-copy-popover" aria-hidden="true">Copy to clipboard</span>
+              <span class="contact-copy-status" role="status" aria-live="polite" aria-atomic="true"></span>
+            </div>
+            <svg class="contact-sparkle contact-sparkle--one" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12 0C13.5 9 15 10.5 24 12C15 13.5 13.5 15 12 24C10.5 15 9 13.5 0 12C9 10.5 10.5 9 12 0Z" /></svg>
+            <svg class="contact-sparkle contact-sparkle--two" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12 0C13.5 9 15 10.5 24 12C15 13.5 13.5 15 12 24C10.5 15 9 13.5 0 12C9 10.5 10.5 9 12 0Z" /></svg>
+            <svg class="contact-sparkle contact-sparkle--three" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12 0C13.5 9 15 10.5 24 12C15 13.5 13.5 15 12 24C10.5 15 9 13.5 0 12C9 10.5 10.5 9 12 0Z" /></svg>
+          </div>
+        </div>
+
+        <div class="contact-scheduling" data-contact-reveal>
+          <p class="contact-or">or</p>
+          <h3 id="contact-schedule-heading" class="contact-schedule-title">LET'S SCHEDULE A MEETING</h3>
+          <div class="contact-scheduler-reveal">
+            <div class="contact-scheduler-card" role="region" aria-labelledby="contact-schedule-heading">
+              <p class="contact-scheduler-status" role="status" aria-live="polite" hidden></p>
+              <div id="contact-calendly" class="contact-calendly" hidden></div>
+              <noscript><p class="contact-scheduler-note">Use the scheduling link below to choose a time on Calendly.</p></noscript>
+              <a class="contact-scheduler-link" href="https://calendly.com/appleaejiemarieb/30min" target="_blank" rel="noopener noreferrer">Open scheduling page <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </div>
+
+        <div class="contact-socials" role="group" aria-label="Social profiles">
+          <a href="https://www.linkedin.com/in/apple-balbarino/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+            <i class="fab fa-linkedin-in" aria-hidden="true"></i><span>LinkedIn</span>
+          </a>
+          <a href="https://www.facebook.com/apple.balbarino.54" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+            <i class="fab fa-facebook-f" aria-hidden="true"></i><span>Facebook</span>
+          </a>
+        </div>
+      </div>
+    </section>
         <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
         <script>
         if (window.AOS) AOS.init({
@@ -336,32 +371,6 @@
         duration: 1000
     });
 </script>
-        <script>
-            function scrollToTop(event) {
-            event.preventDefault(); // Prevent default anchor behavior
-            window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-    });
-}
-            document.querySelectorAll('.links a').forEach(link => {
-                link.addEventListener('click', e => {
-                    const href = link.getAttribute('href');
-                    if (href === '#') return; // Home already uses scrollToTop; '#' is not a selector.
-                    e.preventDefault();
-                    const target = document.querySelector(href);
-                    if (target) target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-  });
-});
-            function hamburg(){
-                const navbar = document.querySelector(".dropdown")
-                navbar.style.transform = "translateY(0px)"
-            }
-            function cancel(){
-                const navbar = document.querySelector(".dropdown")
-                navbar.style.transform = "translateY(-500px)"
-            }
-        </script>
         <script src="typewriter.js"></script>
         
 </body>

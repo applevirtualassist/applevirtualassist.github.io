@@ -7,6 +7,7 @@
 }
 
 html {
+    --nav-height: clamp(4.5rem, 10vh, 7rem);
     scroll-behavior: smooth;
     scrollbar-width: none;  /* Firefox */
     -ms-overflow-style: none;  /* IE and Edge */
@@ -29,7 +30,7 @@ body {
 
 nav {
     width: 100%;
-    height: 10vh;
+    height: var(--nav-height);
     position: fixed;      /* stays visible while scrolling */
     top: 0;               /* stick to top */
     left: 0;
@@ -59,14 +60,26 @@ nav {
     text-shadow: 0 0 10px rgb((154, 131, 101))
 }
 
-.hamburg, .cancel{
+.hamburg {
     cursor: pointer;
-    position: absolute;
-    right: 15px;
-    top: 10px;
-    color: black;
-    font-size: 2rem;
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid rgba(154, 131, 101, .25);
+    border-radius: 10px;
+    background: transparent;
+    color: rgb(154, 131, 101);
+    font-size: 1.875rem;
+    line-height: 1;
     display: none;
+}
+
+.hamburg:focus-visible, .dropdown a:focus-visible {
+    outline: 2px solid rgb(110, 93, 73);
+    outline-offset: -4px;
 }
 
 .nav-container .links {
@@ -123,48 +136,77 @@ nav {
 }
 
 .dropdown{
-    z-index: 100;
+    display: none;
     position: absolute;
-    top: 0;
-    transform: translateY(-500px);
+    top: 100%;
+    left: 0;
+    margin-top: 3px; /* Continue below the navbar's bottom border. */
+    transform: translateY(-8px);
     width: 100%;
-    height: auto;
-    backdrop-filter: brightness(40%) blur(3px);
-    box-shadow: 0 0 20px black;
-    transition: 0.2s linear;
+    max-height: calc(100vh - var(--nav-height));
+    max-height: calc(100dvh - var(--nav-height));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: .5rem clamp(1rem, 4vw, 2rem);
+    border-bottom: 1px solid rgba(154, 131, 101, .3);
+    background: rgba(255, 253, 249, .98);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 12px 24px rgba(82, 65, 43, .14);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 240ms ease, transform 240ms cubic-bezier(.22, .61, .36, 1), visibility 0s 240ms;
+}
+
+.nav--open .dropdown {
+    transition-delay: 0s;
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .dropdown .social-links a{
-    color: white;
+    color: rgb(110, 93, 73);
     display: flex;
     text-decoration: none;
-    justify-content: center;
-    padding: 15px 0;
+    min-height: 48px;
+    padding: .75rem 1rem;
+    border-radius: 8px;
     align-items: center;
-    transition: 0.2s linear;
+    font-weight: 500;
+    transition: background-color 240ms ease;
 }
 
-
-.dropdown .social-links a:hover{
-    background-color: rgb(154, 131, 101);
+.dropdown .social-links a:focus-visible,
+.dropdown .social-links a:active {
+    background: rgba(154, 131, 101, .14);
+}
+@media (hover: hover) {
+    .hamburg:hover, .dropdown .social-links a:hover {
+        background: rgba(154, 131, 101, .14);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .dropdown, .dropdown .social-links a { transition: none; }
 }
 
 section {
   width: 100%;
   height: auto;
-  min-height: 70vh;
+  min-height: min(70vh, 64rem);
   padding: 5rem 0;
 }
 
 /* Hero: portrait-led proportions with a modest increase in body text size. */
 .hero-section {
   min-height: 0;
-  padding: calc(max(10vh, 4.5rem) + clamp(1.5rem, 2vw, 2rem)) clamp(1.25rem, 4vw, 4rem) 0;
+  padding: calc(var(--nav-height) + clamp(1.5rem, 2vw, 2rem)) clamp(1.25rem, 4vw, 4rem) 0;
 }
 
 .main-container {
   width: 100%;
-  max-width: 100rem;
+  max-width: clamp(100rem, 80rem + 16.667vw, 116rem);
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
@@ -175,7 +217,7 @@ section {
 .main-container .image {
   min-width: 0;
   width: 100%;
-  max-width: 43.75rem;
+  max-width: clamp(43.75rem, 34.375rem + 7.813vw, 50rem);
   justify-self: center;
 }
 
@@ -248,7 +290,7 @@ section {
 .content .hero-introduction {
   max-width: 62ch;
   margin-top: 1.25rem;
-  font-size: clamp(1.0625rem, 1rem + 0.125vw, 1.125rem);
+  font-size: clamp(1.0625rem, 1rem + 0.125vw, 1.25rem);
   line-height: 1.65;
   color: rgb(110, 93, 73);
   text-align: left;
@@ -288,11 +330,13 @@ section {
     transition: 0.2s linear;
 }
 
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
 .social-links i:hover{
-    scale: 1.3;
+    scale: 1.1;
     color: white;
     background-color: rgb(154, 131, 101);
     filter: drop-shadow(0 0 10px rgb(154, 131, 101));
+}
 }
 
 .content button,
@@ -317,6 +361,7 @@ section {
 }
 
 
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
 .content button:hover,
 .content .works-button:hover{
     scale: 1.1;
@@ -325,6 +370,7 @@ section {
     background-color: transparent;
     font-weight: 700;
     box-shadow: 0 0 40px rgb(154, 131, 101);
+}
 }
 
 
@@ -526,15 +572,23 @@ section {
 }
 
 /* About Me: one padding boundary and a comfortable reading measure. */
+/* Native hashes use section IDs; subtract their internal content inset.
+   JS refines these margins from layout measurements, but scrollTo uses its own
+   absolute coordinate, so the CSS margin is never added to the JS offset. */
+.portfolio-section[id] {
+  scroll-margin-top: calc(var(--nav-height) + 1.5rem - var(--anchor-inset, 0px));
+}
+.my-works { --anchor-inset: clamp(2rem, 4vw, 4rem); }
+.services-section { --anchor-inset: 100px; }
+
 .about-section {
   min-height: 0;
   padding: 0 clamp(1.25rem, 4vw, 4rem) clamp(3rem, 5vw, 5rem);
-  scroll-margin-top: calc(max(10vh, 4.5rem) + 1.5rem);
 }
 
 .about-container {
   width: 100%;
-  max-width: 80rem;
+  max-width: clamp(80rem, 64rem + 13.333vw, 92rem);
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
@@ -561,7 +615,7 @@ section {
   width: 100%;
   max-width: 65ch;
   justify-self: center;
-  font-size: clamp(1.0625rem, 1rem + 0.15vw, 1.125rem);
+  font-size: clamp(1.0625rem, 1rem + 0.15vw, 1.25rem);
 }
 
 .about-text h2 {
@@ -601,11 +655,10 @@ section {
 .my-works {
   min-height: 0;
   padding: clamp(2rem, 4vw, 4rem) clamp(1rem, 4vw, 4rem) clamp(3rem, 5vw, 5rem);
-  scroll-margin-top: calc(max(10vh, 4.5rem) + 1.5rem);
   color: rgb(110, 93, 73);
 }
 
-.my-works-container { max-width: 88rem; margin: 0 auto; }
+.my-works-container { max-width: clamp(88rem, 72rem + 13.333vw, 104rem); margin: 0 auto; }
 .my-works-heading {
   display: flex;
   align-items: center;
@@ -645,7 +698,7 @@ section {
 }
 .work-category-hint { max-width: 25ch; margin-top: .75rem; font-size: .8125rem; line-height: 1.7; }
 .work-carousel {
-  --work-width: min(29.5%, 17.5rem);
+  --work-width: min(29.5%, clamp(17.5rem, 14rem + 3vw, 21rem));
   --work-ratio: 9 / 16;
   --work-step: 108%;
   min-width: 0;
@@ -737,7 +790,8 @@ section {
 .work-carousel--ready .work-slide .work-media { filter: saturate(.82) contrast(.95); transition: filter 850ms ease; }
 .work-carousel--ready .work-slide--active .work-media { filter: none; }
 .work-carousel--ready .work-slide--reset { transition: none; }
-.work-controls { display: flex; justify-content: center; align-items: center; gap: .65rem; margin-top: .25rem; }
+.work-controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .5rem 1.25rem; margin-top: .25rem; }
+.work-navigation { display: flex; align-items: center; gap: .65rem; }
 .work-control {
   display: inline-flex;
   align-items: center;
@@ -753,8 +807,45 @@ section {
   font-size: 1.125rem;
   transition: background-color 180ms ease;
 }
-.work-control:hover { background: rgba(154, 131, 101, .12); }
-.work-control--rotation { border: 0; border-radius: 6px; font-size: .75rem; min-width: 5rem; }
+@media (hover: hover) {
+  .work-control:hover { background: rgba(154, 131, 101, .12); }
+}
+.work-control--rotation {
+  gap: .65rem;
+  padding-inline: .5rem;
+  border: 0;
+  border-radius: 8px;
+  font-size: .8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.work-autoplay-track {
+  position: relative;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 24px;
+  border: 1px solid rgba(110, 93, 73, .5);
+  border-radius: 999px;
+  background: rgba(110, 93, 73, .16);
+  transition: background-color 240ms ease, border-color 240ms ease;
+}
+.work-autoplay-track::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fffdf9;
+  box-shadow: 0 1px 3px rgba(82, 65, 43, .25);
+  transition: transform 240ms cubic-bezier(.22, .61, .36, 1);
+}
+.work-control--rotation[aria-checked="true"] .work-autoplay-track {
+  background: rgb(154, 131, 101);
+  border-color: rgb(110, 93, 73);
+}
+.work-control--rotation[aria-checked="true"] .work-autoplay-track::before { transform: translateX(18px); }
 .work-control[hidden] { display: none; }
 .work-position { min-width: 4rem; text-align: center; font-size: .75rem; letter-spacing: .12em; font-weight: 600; font-variant-numeric: tabular-nums; }
 .work-video-toggle {
@@ -797,7 +888,7 @@ section {
 .work-lightbox[open] { display: flex; align-items: center; justify-content: center; }
 .work-lightbox-content { display: flex; flex-direction: column; width: 100%; max-width: 1600px; max-height: 100%; min-height: 0; gap: 1rem; }
 .work-lightbox-toolbar { display: flex; flex-shrink: 0; align-items: center; gap: .75rem; }
-.work-lightbox-toolbar h3 { flex: 1; font-size: clamp(.875rem, 2vw, 1.125rem); font-weight: 500; }
+.work-lightbox-toolbar h3 { flex: 1; margin-left: var(--work-lightbox-fit-inset, 0px); font-size: clamp(.875rem, 2vw, 1.125rem); font-weight: 500; }
 .work-lightbox-toolbar button {
   flex-shrink: 0;
   min-width: 44px;
@@ -814,7 +905,7 @@ section {
 .work-lightbox-viewport { min-height: 0; overflow: auto; overscroll-behavior: contain; border-radius: 8px; }
 .work-lightbox-image { display: block; width: 100%; height: auto; max-height: 72vh; max-height: 72dvh; object-fit: contain; }
 .work-lightbox-viewport--zoomed .work-lightbox-image { width: 2560px; max-width: none; max-height: none; }
-.work-lightbox-content p { flex-shrink: 0; max-width: 100ch; font-size: .75rem; line-height: 1.6; }
+.work-lightbox-content p { flex-shrink: 0; margin-inline: var(--work-lightbox-fit-inset, 0px); max-width: 100ch; font-size: .75rem; line-height: 1.6; }
 .work-lightbox :focus-visible { outline-color: #fffaf2; outline-offset: -3px; }
 
 @media (max-width: 1100px) {
@@ -835,6 +926,7 @@ section {
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .my-works .work-slide, .my-works .work-media, .my-works .work-control { transition: none; }
+  .work-autoplay-track, .work-autoplay-track::before { transition: none; }
   .content .works-button { transition: none; }
   .content .works-button:hover { scale: none; }
 }
@@ -855,7 +947,7 @@ section {
   flex-wrap: wrap;
   justify-content: center;
   gap: 20px;
-  max-width: 1120px;
+  max-width: clamp(70rem, 60rem + 8.333vw, 80rem);
   margin: 0 auto 60px;
   padding: 0 16px;
 }
@@ -902,10 +994,12 @@ section {
   display: block;
 }
 
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
 .skill-box:hover .tool-icon-circle {
   transform: scale(1.06);
   background: rgba(154, 131, 101, 0.12);
   border-color: rgba(154, 131, 101, 0.45);
+}
 }
 
 .skill-box i {
@@ -931,10 +1025,12 @@ section {
 }
 
 /* Hover effect like "View My CV" button */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
 .skill-box:hover {
     box-shadow: 0 20px 40px rgba(154, 131, 101, 0.25);
     z-index: 10; /* keeps hovered box above neighbors */
     transform: translateY(-5px); /* optional: subtle lift */
+}
 }
 
 /* Services Section */
@@ -953,7 +1049,7 @@ section {
 }
 
 .services-container {
-  max-width: 1200px;
+  max-width: clamp(75rem, 60rem + 12.5vw, 87.5rem);
   margin: 0 auto;
   display: grid;
   grid-template-columns: 320px 1fr; /* left column (text) and right (cards) */
@@ -997,9 +1093,11 @@ section {
     transition: 0.3s ease;
 }
 
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
 .view-all:hover {
     background: rgb(178, 146, 81); /* slightly lighter shade on hover */
     transform: scale(1.1);
+}
 }
 
 /* Right column: the row of cards */
@@ -1045,7 +1143,9 @@ section {
   flex: 1;
   overflow: hidden;
 }
-.service-box:hover { transform: translateY(-6px); box-shadow: 0 14px 30px rgba(154,131,101,0.12); }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .service-box:hover { transform: translateY(-6px); box-shadow: 0 14px 30px rgba(154,131,101,0.12); }
+}
 
 .service-box.is-hidden {
   display: none;
@@ -1087,6 +1187,7 @@ section {
   transition: transform 0.28s ease;
 }
 
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
 .services-carousel-arrow:hover {
   background: rgb(178, 146, 81);
   box-shadow: 0 16px 34px rgba(154, 131, 101, 0.34);
@@ -1096,6 +1197,7 @@ section {
 .services-carousel-arrow:hover i {
   transform: translateX(3px);
 }
+}
 
 /* ===== SKILLS GRID (keeps your 4-per-row on desktop) ===== */
 .skills-grid {
@@ -1103,43 +1205,328 @@ section {
   flex-wrap: wrap;
   justify-content: center;
   gap: 20px;
-  max-width: 1120px;
+  max-width: clamp(70rem, 60rem + 8.333vw, 80rem);
   margin: 0 auto 60px;
   padding: 0 16px;
 }
 
+/* ===== CONTACT: editorial closing, email first, then the live scheduler ===== */
+.contact-me-section {
+  --contact-ink: rgb(110, 93, 73);
+  --contact-accent: rgb(154, 131, 101);
+  --contact-paper: rgb(255, 253, 249);
+  --contact-ease: cubic-bezier(.22, .61, .36, 1);
+  --contact-gutter: clamp(1rem, 4vw, 3rem);
+  --anchor-inset: clamp(4rem, 7vw, 8rem);
+  min-height: 0;
+  padding: var(--anchor-inset) var(--contact-gutter) clamp(3rem, 6vw, 6rem);
+  color: var(--contact-ink);
+}
 .contact-me {
+  max-width: 74rem;
+  margin-inline: auto;
   text-align: center;
-  margin-top: 30px;
-  color: rgb(154, 131, 101);
-  font-size: 20px;
 }
-
-.contact-me .social-links {
-  margin-top: 5px;
-  margin-bottom: 15px;
+.contact-title,
+.contact-schedule-title,
+.contact-or {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+.contact-title {
+  font-size: clamp(2.125rem, 7.4vw, 6.25rem);
+  line-height: 1.15;
+}
+.contact-drawn-arrow {
+  display: block;
+  width: clamp(10.5rem, 17vw, 14.5rem);
+  height: auto;
+  margin: .5rem auto .875rem;
+  color: var(--contact-accent);
+  pointer-events: none;
+}
+.contact-drawn-arrow path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.contact-email-stage {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+}
+.contact-email {
+  appearance: none;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  margin: 0;
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  min-height: 4.5rem;
+  padding: 1.125rem clamp(1.5rem, 3vw, 2.75rem);
+  border: 1px solid rgba(154, 131, 101, .25);
+  border-radius: 999px;
+  background: var(--contact-paper);
+  box-shadow: 0 6px 20px rgba(110, 93, 73, .06);
+  color: var(--contact-ink);
+  font-size: clamp(.875rem, 1.55vw, 1.25rem);
+  font-weight: 400;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 260ms var(--contact-ease), box-shadow 260ms, border-color 260ms;
+}
+.contact-email-icon {
+  flex: 0 0 auto;
+  width: 1.375rem;
+  height: 1.375rem;
+  color: var(--contact-accent);
+  transition: transform 260ms var(--contact-ease);
+}
+.contact-email:disabled { cursor: text; }
+.contact-email span { -webkit-user-select: text; user-select: text; }
+.contact-copy-check { display: none; }
+.contact-email-stage[data-copy-state="success"] .contact-copy-glyph { display: none; }
+.contact-email-stage[data-copy-state="success"] .contact-copy-check { display: block; }
+/* Local to the pill; visibility also keeps the bubble hidden under reduced motion. */
+#contact-me .contact-copy-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + .75rem);
+  z-index: 1;
+  width: max-content;
+  max-width: 100%;
+  padding: .5rem .875rem;
+  border: 1px solid rgba(154, 131, 101, .25);
+  border-radius: 999px;
+  background: var(--contact-paper);
+  box-shadow: 0 4px 14px rgba(110, 93, 73, .08);
+  color: var(--contact-ink);
+  font-size: .6875rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  translate: 0 5px;
+  transition: opacity 220ms var(--contact-ease), translate 220ms var(--contact-ease), visibility 0s linear 220ms;
+}
+#contact-me .contact-email-stage:is([data-copy-state="success"], [data-copy-state="error"]) .contact-copy-popover,
+#contact-me .contact-email:focus-visible:not(:disabled) + .contact-copy-popover {
+  opacity: 1;
+  visibility: visible;
+  translate: 0 0;
+  transition-delay: 0s;
+}
+.contact-copy-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 1024px) {
+  #contact-me .contact-copy-popover {
+    top: calc(100% + .75rem);
+    bottom: auto;
+    inset-inline: 0;
+    margin-inline: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #contact-me .contact-copy-popover { translate: none; }
+}
+.contact-sparkle {
+  position: absolute;
+  color: var(--contact-accent);
+  pointer-events: none;
+}
+.contact-sparkle--one { width: 18px; height: 18px; left: 1%; top: -24px; --sparkle-delay: 2350ms; }
+.contact-sparkle--two { width: 12px; height: 12px; right: -20px; top: 0; --sparkle-delay: 2490ms; }
+.contact-sparkle--three { width: 9px; height: 9px; right: 5%; bottom: -22px; --sparkle-delay: 2630ms; }
+.contact-scheduling { margin-top: clamp(3.5rem, 6vw, 5.5rem); }
+.contact-or { font-size: 1.25rem; line-height: 1.5; }
+.contact-schedule-title {
+  margin: clamp(2rem, 4vw, 3rem) auto clamp(1.75rem, 3vw, 2.5rem);
+  max-width: 26ch;
+  font-size: clamp(1.75rem, 3.3vw, 2.75rem);
+  line-height: 1.25;
+}
+.contact-scheduler-card {
+  position: relative;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: clamp(.5rem, 1.5vw, 1.25rem);
+  border: 1px solid rgba(154, 131, 101, .23);
+  border-radius: 1.75rem;
+  background: var(--contact-paper);
+  box-shadow: 0 16px 44px rgba(110, 93, 73, .07);
+}
+.contact-calendly {
+  width: 100%;
+  min-width: 0;
+  height: 700px;
+  min-height: 700px;
+  overflow: hidden;
+  border-radius: 1rem;
+}
+/* Only the iframe element belongs to this page; Calendly owns its contents. */
+.contact-calendly iframe { display: block; width: 100%; height: 100%; border: 0; }
+.contact-scheduler-status,
+.contact-scheduler-note {
+  padding: 3rem 1rem 1.5rem;
+  font-size: .875rem;
+  line-height: 1.7;
+}
+.contact-scheduler-card[data-state="loading"] .contact-scheduler-status {
+  position: absolute;
+  inset: 40% 1rem auto;
+  padding: 1rem;
+  pointer-events: none;
+}
+.contact-scheduler-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  min-height: 44px;
+  margin-block: .5rem .25rem;
+  padding: .5rem .75rem;
+  border-radius: .5rem;
+  color: var(--contact-ink);
+  font-size: .75rem;
+  text-underline-offset: .25em;
+  text-decoration-color: rgba(110, 93, 73, .4);
+}
+.contact-scheduler-card[data-state="failed"] .contact-scheduler-link {
+  margin-bottom: 1.5rem;
+  font-size: .875rem;
+}
+.contact-socials {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: clamp(2rem, 4vw, 3rem);
+}
+.contact-socials a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .625rem;
+  min-height: 44px;
+  padding: .625rem 1rem;
+  border-radius: 999px;
+  color: var(--contact-ink);
+  font-size: .75rem;
+  text-decoration: none;
+  transition: transform 260ms var(--contact-ease), background-color 260ms;
+}
+.contact-socials i { font-size: 1rem; }
+.contact-me a:focus-visible,
+.contact-me .contact-email:focus-visible {
+  outline: 3px solid var(--contact-ink);
+  outline-offset: 5px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .contact-email:hover {
+    transform: translateY(-3px);
+    border-color: rgba(154, 131, 101, .6);
+    box-shadow: 0 10px 28px rgba(110, 93, 73, .13);
+  }
+  .contact-email:hover .contact-email-icon { transform: translateY(-1px); }
+  #contact-me .contact-email:hover:not(:disabled) + .contact-copy-popover {
+    opacity: 1;
+    visibility: visible;
+    translate: 0 0;
+    transition-delay: 0s;
+  }
+  .contact-socials a:hover { background: rgba(255, 253, 249, .5); transform: translateY(-2px); }
+  .contact-scheduler-link:hover { text-decoration-color: currentColor; }
 }
 
-.contact-me .social-links i {
-  font-size: 2rem;
-  color: rgb(154, 131, 101);
-  transition: 0.3s;
+/* Opt in only after the observer is installed. No JS means everything is visible. */
+.contact-reveal-ready .contact-intro:not(.is-revealed) :is(.contact-title, .contact-email-reveal, .contact-sparkle),
+.contact-reveal-ready .contact-scheduling:not(.is-revealed) > :is(.contact-or, .contact-schedule-title, .contact-scheduler-reveal) { opacity: 0; }
+.contact-reveal-ready .contact-intro:not(.is-revealed) .contact-drawn-arrow path { stroke-dashoffset: 1; }
+.contact-reveal-ready .is-revealed .contact-title { animation: contact-title-in 800ms var(--contact-ease) both; }
+.contact-reveal-ready .is-revealed .contact-arrow-line { animation: contact-ink-in 1350ms var(--contact-ease) 450ms both; }
+.contact-reveal-ready .is-revealed .contact-arrow-tip { animation: contact-ink-in 250ms ease-out 1600ms both; }
+.contact-reveal-ready .is-revealed .contact-email-reveal { animation: contact-email-in 650ms var(--contact-ease) 1450ms both; }
+.contact-reveal-ready .is-revealed .contact-sparkle { animation: contact-sparkle-in 550ms var(--contact-ease) var(--sparkle-delay) both; }
+.contact-reveal-ready .is-revealed .contact-or { animation: contact-soft-in 600ms var(--contact-ease) both; }
+.contact-reveal-ready .is-revealed .contact-schedule-title { animation: contact-soft-in 650ms var(--contact-ease) 140ms both; }
+.contact-reveal-ready .is-revealed .contact-scheduler-reveal { animation: contact-soft-in 700ms var(--contact-ease) 280ms both; }
+/* Keyboard users never have to wait for an entrance to use a link or the embed. */
+.contact-reveal-ready [data-contact-reveal]:focus-within :is(.contact-title, .contact-email-reveal, .contact-sparkle, .contact-or, .contact-schedule-title, .contact-scheduler-reveal) {
+  opacity: 1;
+  animation: none;
 }
-
-.contact-me .social-links i:hover {
-  color: white;
-  background-color: rgb(154, 131, 101);
-  border-radius: 50%;
-  padding: 5px;
-  transform: scale(1.2);
+.contact-reveal-ready .contact-intro:focus-within .contact-drawn-arrow path { stroke-dashoffset: 0; animation: none; }
+.contact-reveal-ready .is-settled * { animation: none !important; opacity: 1; }
+.contact-reveal-ready .is-settled .contact-drawn-arrow path { stroke-dashoffset: 0; }
+@keyframes contact-title-in {
+  from { opacity: 0; transform: translateY(18px); filter: blur(2px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
 }
-#contact-me {
-    min-height: auto;
-    height: auto;
-    padding-bottom: 40px;
+@keyframes contact-ink-in { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes contact-email-in {
+  from { opacity: 0; transform: translateY(12px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes contact-sparkle-in {
+  from { opacity: 0; transform: scale(.6) rotate(-12deg); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes contact-soft-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+/* Tighten only the frame on standard-height desktops; keep Calendly unscaled. */
+@media (min-width: 1249px) and (max-height: 1100px) {
+  .contact-scheduler-card { max-width: 66rem; padding: .75rem; }
+  .contact-calendly { height: 660px; min-height: 660px; }
+}
+@media (max-width: 1248px) {
+  .contact-calendly { height: 940px; min-height: 940px; }
+}
+@media (max-width: 600px) {
+  .contact-title { font-size: clamp(2rem, 9.3vw, 3.5rem); }
+  .contact-drawn-arrow { width: 10rem; margin-top: .75rem; }
+  .contact-email { min-height: 56px; padding: .875rem 1.125rem; gap: 1rem; font-size: .875rem; }
+  .contact-email-icon { width: 1.125rem; height: 1.125rem; }
+  .contact-sparkle--two { right: 0; top: -18px; }
+  .contact-schedule-title { max-width: 19ch; font-size: clamp(1.75rem, 6.2vw, 2.25rem); }
+  .contact-scheduler-card { padding: .25rem; border-radius: 1.25rem; }
+}
+@media (max-width: 374px) {
+  .contact-email { padding-inline: .875rem; gap: .625rem; font-size: .8125rem; }
+  /* At 320px, give Calendly the full screen width without widening the page. */
+  .contact-scheduler-card {
+    width: calc(100% + 2 * var(--contact-gutter));
+    max-width: none;
+    margin-inline: calc(-1 * var(--contact-gutter));
+    padding-inline: 0;
+    border-inline: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce), print {
+  .contact-me *, .contact-me *::before, .contact-me *::after {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+  .contact-drawn-arrow path { stroke-dashoffset: 0 !important; }
 }
 @media (max-width: 1100px) {
   .services-container { grid-template-columns: 1fr; } /* text on top, cards underneath */
@@ -1182,11 +1569,14 @@ section {
         overflow-y: visible;
     }
 
+    .nav-container {
+        justify-content: space-between;
+        gap: 1rem;
+        padding-inline: clamp(1rem, 4vw, 2rem);
+    }
+
     nav .logo {
-        position: absolute;
-        top: 16px;
-        left: 15px;
-        font-size: 1.5rem;
+        font-size: clamp(1.25rem, 4vw, 1.5rem);
     }
 
     .main-container {
@@ -1213,13 +1603,12 @@ section {
         display: none;
     }
 
-    .hamburg,
-    .cancel {
+    .dropdown {
         display: block;
     }
 
-    .cancel {
-        color: white;
+    .hamburg {
+        display: inline-flex;
     }
 
     .about-container {
@@ -1248,16 +1637,6 @@ section {
   }
 }
 
-/* Target QHD and up */
-@media (min-width: 2560px) {
-  body {
-    zoom: 1.25;   /* Scale up content by 25% */
-  }
-  .work-lightbox {
-    zoom: .8;    /* Keep the modal's viewport units true to the screen. */
-  }
-}
-
 /* Added by JS only; content remains visible without scripting or motion support. */
 .reveal-pending { opacity: 0; }
 .reveal-entering {
@@ -1278,8 +1657,7 @@ section {
   .tool-icon-circle,
   .view-all,
   .services-carousel-arrow,
-  .services-carousel-arrow i,
-  .contact-me .social-links i {
+  .services-carousel-arrow i {
     transition-property: transform, scale, background-color, color, box-shadow, border-color, filter;
     transition-duration: 550ms;
     transition-timing-function: cubic-bezier(.22, .61, .36, 1);
@@ -1292,8 +1670,7 @@ section {
   .skill-box:hover .tool-icon-circle,
   .view-all:hover,
   .services-carousel-arrow:hover,
-  .services-carousel-arrow:hover i,
-  .contact-me .social-links i:hover {
+  .services-carousel-arrow:hover i {
     transition-delay: 90ms;
   }
 }
@@ -1314,8 +1691,7 @@ section {
   .highlight-flourish path { animation: none !important; stroke-dashoffset: 0 !important; }
   .dropdown,
   .dropdown *,
-  .hamburg,
-  .cancel {
+  .hamburg {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;

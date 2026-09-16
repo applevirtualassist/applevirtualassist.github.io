@@ -31,6 +31,13 @@ function erase() {
 }
 
 
+// Use CSS viewport height: percentage IntersectionObserver margins resolve against width.
+function readingZoneOptions() {
+    const navHeight = Math.ceil(document.querySelector("nav").getBoundingClientRect().bottom);
+    const bottomInset = Math.round(window.innerHeight * .16);
+    return { threshold: 0, rootMargin: `-${navHeight}px 0px -${bottomInset}px 0px` };
+}
+
 // CAREER HIGHLIGHTS: one shared clock keeps all three counters in sync.
 function initCareerHighlights() {
     const section = document.querySelector(".career-highlights-section");
@@ -57,8 +64,7 @@ function initCareerHighlights() {
     let frameId;
     let observer;
     let scrollIntent = false;
-    // The existing large-screen body zoom can make the body scroll before the document.
-    const pageScrollY = () => window.scrollY + document.body.scrollTop;
+    const pageScrollY = () => window.scrollY;
     let lastScrollY = pageScrollY();
     const duration = 1800;
 
@@ -73,6 +79,7 @@ function initCareerHighlights() {
         if (started) return;
         started = true;
         observer.disconnect();
+        window.removeEventListener("resize", observeHighlights);
         revealHighlights();
         section.classList.add("career-highlights--drawing");
         const startTime = performance.now();
@@ -104,6 +111,16 @@ function initCareerHighlights() {
         window.removeEventListener("scroll", observeAfterScroll, true);
     }
 
+    function observeHighlights() {
+        if (started) return;
+        if (observer) observer.disconnect();
+        observer = new IntersectionObserver(entries => {
+            if (entries.some(entry => entry.isIntersecting)) startCounters();
+        }, readingZoneOptions());
+        // Individual items can enter the reading zone even in a short mobile viewport.
+        section.querySelectorAll(".career-highlights > li").forEach(item => observer.observe(item));
+    }
+
     function observeAfterScroll(event) {
         if (event.target !== document && event.target !== document.body) return;
         const currentScrollY = pageScrollY();
@@ -112,14 +129,8 @@ function initCareerHighlights() {
         if (!scrollIntent || !movedDown) return;
 
         removeScrollListeners();
-        observer = new IntersectionObserver(entries => {
-            if (entries.some(entry => entry.isIntersecting && entry.intersectionRatio >= 0.35)) {
-                startCounters();
-            }
-        }, { threshold: 0.35 });
-
-        // Observe individual items so even a short mobile viewport can trigger all counters.
-        section.querySelectorAll(".career-highlights > li").forEach(item => observer.observe(item));
+        observeHighlights();
+        window.addEventListener("resize", observeHighlights);
     }
 
     // A tall viewport or restored scroll position must not start counting on refresh.
@@ -134,6 +145,7 @@ function initCareerHighlights() {
         if (!event.matches) return;
         started = true;
         removeScrollListeners();
+        window.removeEventListener("resize", observeHighlights);
         if (observer) observer.disconnect();
         cancelAnimationFrame(frameId);
         revealHighlights();
@@ -278,7 +290,7 @@ function finishScrollReveal(element) {
     element.classList.add("reveal-complete");
 }
 
-// Services and tools reveal when 30% of each item is in the reading area.
+// Reveal within the area below the navbar and above the bottom 16% of the viewport.
 // Observe the resting boxes: CSS translate does not move them until the reveal starts.
 function initSectionReveals() {
     const elements = Array.from(document.querySelectorAll("[data-scroll-reveal]"));
@@ -288,6 +300,7 @@ function initSectionReveals() {
 
     const timers = new Map();
     let observer;
+    let resizeFrame;
     elements.forEach(element => {
         element.classList.add("reveal-pending");
         element.addEventListener("animationend", event => {
@@ -299,41 +312,53 @@ function initSectionReveals() {
         if (observer) observer.disconnect();
         timers.forEach(timer => clearTimeout(timer));
         timers.clear();
-        const navHeight = Math.ceil(document.querySelector("nav").getBoundingClientRect().bottom);
         observer = new IntersectionObserver(entries => {
-            let stagger = 0;
-            entries.forEach(entry => {
+            const staggers = new Map();
+            entries.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top ||
+                a.boundingClientRect.left - b.boundingClientRect.left).forEach(entry => {
                 const element = entry.target;
                 if (element.classList.contains("reveal-complete") || element.classList.contains("reveal-entering")) {
                     observer.unobserve(element);
                     return;
                 }
-                if (!entry.isIntersecting || entry.intersectionRatio < 0.3) {
+                if (!entry.isIntersecting) {
                     clearTimeout(timers.get(element));
                     timers.delete(element);
                     return;
                 }
                 if (timers.has(element)) return;
-                const delay = 120 + Math.min(stagger++, 3) * 70;
+                const group = element.closest(".work-category, section");
+                const stagger = staggers.get(group) || 0;
+                staggers.set(group, stagger + 1);
+                const delay = 120 + Math.min(stagger, 3) * 70;
                 timers.set(element, setTimeout(() => {
                     timers.delete(element);
                     observer.unobserve(element);
                     if (!element.classList.contains("reveal-complete")) element.classList.add("reveal-entering");
                 }, delay));
             });
-        }, { threshold: [0, 0.3], rootMargin: `-${navHeight}px 0px 0px 0px` });
+        }, readingZoneOptions());
         elements.filter(element => !element.classList.contains("reveal-complete") && !element.classList.contains("reveal-entering"))
             .forEach(element => observer.observe(element));
     }
 
+    function queueObserve() {
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(observe);
+    }
+
     observe();
-    window.addEventListener("resize", observe);
+    window.addEventListener("resize", queueObserve);
+    const navObserver = "ResizeObserver" in window ? new ResizeObserver(queueObserve) : null;
+    navObserver?.observe(document.querySelector("nav"));
     motion.addEventListener("change", event => {
         if (!event.matches) return;
         observer.disconnect();
         timers.forEach(timer => clearTimeout(timer));
         timers.clear();
-        window.removeEventListener("resize", observe);
+        cancelAnimationFrame(resizeFrame);
+        navObserver?.disconnect();
+        window.removeEventListener("resize", queueObserve);
         elements.forEach(finishScrollReveal);
     });
 }
@@ -484,13 +509,365 @@ function initServicesCarousel() {
 }
 
 
+// One stable navbar button owns the mobile disclosure and its accessibility state.
+function initMobileNavigation() {
+    const nav = document.querySelector("nav");
+    const button = nav.querySelector(".hamburg");
+    const dropdown = document.getElementById("mobile-navigation");
+    const icon = button.querySelector("i");
+    const mobile = window.matchMedia("(max-width: 1024px)");
+    let open = false;
+
+    function setOpen(value) {
+        open = value && mobile.matches;
+        if (!open && dropdown.contains(document.activeElement)) {
+            const href = document.activeElement.getAttribute("href");
+            const desktopLink = Array.from(nav.querySelectorAll(".links a"))
+                .find(link => link.getAttribute("href") === href);
+            (mobile.matches ? button : desktopLink)?.focus({ preventScroll: true });
+        }
+        nav.classList.toggle("nav--open", open);
+        button.setAttribute("aria-expanded", String(open));
+        button.setAttribute("aria-label", `${open ? "Close" : "Open"} navigation menu`);
+        icon.className = `fa-solid ${open ? "fa-xmark" : "fa-bars"}`;
+        dropdown.inert = !open;
+        dropdown.setAttribute("aria-hidden", String(!open));
+    }
+
+    button.addEventListener("click", () => setOpen(!open));
+    dropdown.addEventListener("click", event => {
+        if (event.target.closest("a")) setOpen(false);
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key !== "Escape" || !open) return;
+        event.preventDefault();
+        setOpen(false);
+        button.focus({ preventScroll: true });
+    });
+    document.addEventListener("pointerdown", event => {
+        if (open && !nav.contains(event.target)) setOpen(false);
+    });
+    mobile.addEventListener("change", () => setOpen(false));
+    setOpen(false);
+}
+
+// Shared positioning for navbar links, the hero CTA, and native URL fragments.
+function initInternalNavigation() {
+    const nav = document.querySelector("nav");
+    const sections = Array.from(document.querySelectorAll(".portfolio-section[id]"));
+    const mobile = window.matchMedia("(max-width: 1024px)");
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const gap = 24;
+    const initialHash = window.location.hash;
+    let initialPending = Boolean(resolveSection(initialHash));
+    let resizeFrame;
+    // A direct fragment load should start at its destination, not animate from Home.
+    if (initialPending) document.documentElement.style.scrollBehavior = "auto";
+
+    function resolveSection(hash) {
+        if (!hash || hash === "#") return null;
+        try {
+            const section = document.getElementById(decodeURIComponent(hash.slice(1)));
+            return sections.includes(section) ? section : null;
+        } catch { return null; }
+    }
+
+    function visualAnchor(section) {
+        // The existing mobile About layout stacks the portrait above the text.
+        return (mobile.matches && section.querySelector("[data-scroll-anchor-mobile]")) ||
+            section.querySelector("[data-scroll-anchor]") || section;
+    }
+
+    function layoutTop(element) {
+        // Resting layout coordinates ignore AOS transforms and reveal translations.
+        // Measuring an animated bounding rect would overshoot on a first/repeated click.
+        let top = 0;
+        for (let node = element; node; node = node.offsetParent) top += node.offsetTop;
+        // Native fragment navigation can also scroll the existing overflow:auto body.
+        // Account for ancestor scrolling, just as rect.top + window.scrollY would.
+        for (let parent = element.parentElement; parent && parent !== document.documentElement; parent = parent.parentElement) {
+            top -= parent.scrollTop;
+        }
+        return top;
+    }
+
+    function destination(section) {
+        return Math.max(0, layoutTop(visualAnchor(section)) - nav.getBoundingClientRect().height - gap);
+    }
+
+    function refreshNativeOffsets() {
+        const offset = nav.getBoundingClientRect().height + gap;
+        sections.forEach(section => {
+            const inset = layoutTop(visualAnchor(section)) - layoutTop(section);
+            section.style.scrollMarginTop = `${offset - inset}px`;
+        });
+    }
+
+    document.addEventListener("click", event => {
+        const link = event.target.closest('a[href^="#"]');
+        if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey ||
+            event.shiftKey || event.altKey || link.hasAttribute("download") ||
+            (link.target && link.target !== "_self")) return;
+        const hash = link.getAttribute("href");
+        const section = resolveSection(hash);
+        if (hash !== "#" && !section) return;
+        event.preventDefault();
+        initialPending = false;
+        refreshNativeOffsets();
+        const nextHash = hash === "#" ? "" : hash;
+        if (window.location.hash !== nextHash) {
+            // pushState preserves real fragment URLs without a second native jump.
+            history.pushState(null, "", nextHash || window.location.pathname + window.location.search);
+        }
+        if (!section) document.body.scrollTop = 0;
+        window.scrollTo({ top: section ? destination(section) : 0, behavior: motion.matches ? "instant" : "smooth" });
+    });
+
+    window.addEventListener("hashchange", () => {
+        const section = resolveSection(window.location.hash);
+        if (window.location.hash && !section) return;
+        initialPending = false;
+        refreshNativeOffsets();
+        // Back/Forward may restore an old page offset after native body scrolling.
+        // Correct in the same event, before paint; clicks use pushState and skip this.
+        if (!section) document.body.scrollTop = 0;
+        window.scrollTo({ top: section ? destination(section) : 0, behavior: "instant" });
+    });
+
+    function queueOffsets() {
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(refreshNativeOffsets);
+    }
+    window.addEventListener("resize", queueOffsets);
+    if ("ResizeObserver" in window) new ResizeObserver(queueOffsets).observe(nav);
+
+    // Run before the browser's initial fragment positioning. Native hash changes
+    // and history traversal can then use the same measured, animation-free inset.
+    refreshNativeOffsets();
+    const cancelInitial = () => { initialPending = false; };
+    const intentEvents = ["wheel", "touchstart", "pointerdown", "keydown"];
+    intentEvents.forEach(type => window.addEventListener(type, cancelInitial, { once: true, passive: true }));
+    window.addEventListener("load", async () => {
+        if (document.fonts) await document.fonts.ready;
+        refreshNativeOffsets();
+        const section = resolveSection(initialHash);
+        if (initialPending && section && window.location.hash === initialHash) {
+            // Correct only a real late layout shift; never replay a smooth scroll on load.
+            const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+            const top = Math.min(destination(section), maxScroll);
+            if (Math.abs(window.scrollY - top) > 1) window.scrollTo({ top, behavior: "instant" });
+        }
+        document.documentElement.style.removeProperty("scroll-behavior");
+        intentEvents.forEach(type => window.removeEventListener(type, cancelInitial));
+    }, { once: true });
+}
+
+// This script is at the end of body: the anchors already exist, before fragment scrolling.
+initInternalNavigation();
+
+// CONTACT: independent one-time reveals and a lazy, public Calendly inline embed.
+function initContactSection() {
+    const section = document.getElementById("contact-me");
+    if (!section || section.dataset.contactInitialized) return;
+    section.dataset.contactInitialized = "true";
+
+    function initContactEmailCopy() {
+        const button = section.querySelector("[data-copy-email]");
+        const stage = button.closest(".contact-email-stage");
+        const popover = stage.querySelector(".contact-copy-popover");
+        const status = stage.querySelector(".contact-copy-status");
+        let resetTimer;
+        let copyRequest = 0;
+
+        function copyWithSelection(value) {
+            const previousFocus = document.activeElement;
+            const field = document.createElement("textarea");
+            field.value = value;
+            field.readOnly = true;
+            field.tabIndex = -1;
+            field.setAttribute("aria-hidden", "true");
+            field.style.cssText = "position:fixed;top:0;left:-9999px;width:1px;height:1px;padding:0;border:0;font-size:16px;";
+            section.append(field);
+            try {
+                field.focus({ preventScroll: true });
+                field.select();
+                field.setSelectionRange(0, value.length);
+                return document.execCommand("copy");
+            } finally {
+                field.remove();
+                previousFocus?.focus({ preventScroll: true });
+            }
+        }
+
+        button.addEventListener("click", async () => {
+            const request = ++copyRequest;
+            const value = button.dataset.copyEmail;
+            clearTimeout(resetTimer);
+            status.textContent = "";
+            let copied = false;
+            try {
+                if (typeof navigator.clipboard?.writeText !== "function") throw new Error("Clipboard unavailable");
+                await navigator.clipboard.writeText(value);
+                copied = true;
+            } catch {
+                // A late rejection must not overwrite a newer copy result or steal focus.
+                if (request !== copyRequest) return;
+                try { copied = copyWithSelection(value); } catch { /* Show the inline failure message below. */ }
+            }
+            if (request !== copyRequest) return;
+            stage.dataset.copyState = copied ? "success" : "error";
+            const message = copied ? "Copied to clipboard" : "Couldn't copy";
+            popover.textContent = message;
+            status.textContent = message;
+            resetTimer = setTimeout(() => {
+                stage.dataset.copyState = "idle";
+                popover.textContent = "Copy to clipboard";
+                status.textContent = "";
+            }, 1800);
+        });
+        // Without scripting the address stays readable, with no nonfunctional copy hint.
+        button.disabled = false;
+    }
+    initContactEmailCopy();
+
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const groups = Array.from(section.querySelectorAll("[data-contact-reveal]"));
+    const pending = new Set(groups);
+    let revealObserver;
+
+    function stopReveals() {
+        revealObserver?.disconnect();
+        window.removeEventListener("resize", observeReveals);
+    }
+
+    function revealGroup(group, immediate = false) {
+        group.classList.add("is-revealed");
+        if (immediate) group.classList.add("is-settled");
+        pending.delete(group);
+        revealObserver?.unobserve(group);
+        if (!pending.size) stopReveals();
+    }
+
+    function observeReveals() {
+        revealObserver?.disconnect();
+        revealObserver = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) revealGroup(entry.target);
+            });
+        }, readingZoneOptions());
+        pending.forEach(group => revealObserver.observe(group));
+    }
+
+    if (!motion.matches && "IntersectionObserver" in window) {
+        observeReveals();
+        section.classList.add("contact-reveal-ready");
+        window.addEventListener("resize", observeReveals);
+        section.addEventListener("focusin", event => {
+            const group = event.target.closest("[data-contact-reveal]");
+            if (group) revealGroup(group, true);
+        });
+        motion.addEventListener("change", event => {
+            if (!event.matches) return;
+            stopReveals();
+            pending.clear();
+            // Removing the gate also finishes any sequence currently in progress.
+            section.classList.remove("contact-reveal-ready");
+        });
+    }
+
+    const host = section.querySelector("#contact-calendly");
+    const card = section.querySelector(".contact-scheduler-card");
+    const status = section.querySelector(".contact-scheduler-status");
+    const schedulingLink = section.querySelector(".contact-scheduler-link");
+    const scriptURL = "https://assets.calendly.com/assets/external/widget.js";
+    let scriptPromise;
+    let embedPromise;
+
+    // Reserve the scheduler's resting dimensions before it approaches the viewport.
+    host.hidden = false;
+    status.hidden = false;
+    status.textContent = "Loading scheduler…";
+    card.dataset.state = "loading";
+
+    function loadCalendlyScript() {
+        if (typeof window.Calendly?.initInlineWidget === "function") return Promise.resolve(window.Calendly);
+        if (scriptPromise) return scriptPromise;
+        scriptPromise = new Promise((resolve, reject) => {
+            const existing = Array.from(document.scripts).find(script => script.src === scriptURL);
+            const script = existing || document.createElement("script");
+            let timeout;
+
+            function finish(error) {
+                clearTimeout(timeout);
+                script.removeEventListener("load", onLoad);
+                script.removeEventListener("error", onError);
+                if (error) reject(error);
+                else resolve(window.Calendly);
+            }
+            function onLoad() {
+                finish(typeof window.Calendly?.initInlineWidget === "function"
+                    ? null : new Error("Calendly widget unavailable"));
+            }
+            function onError() { finish(new Error("Calendly script could not load")); }
+
+            script.addEventListener("load", onLoad, { once: true });
+            script.addEventListener("error", onError, { once: true });
+            timeout = setTimeout(onError, 15000);
+            if (!existing) {
+                script.src = scriptURL;
+                script.async = true;
+                document.head.append(script);
+            }
+        });
+        return scriptPromise;
+    }
+
+    function initCalendlyEmbed() {
+        if (embedPromise) return embedPromise;
+        embedPromise = loadCalendlyScript().then(calendly => {
+            // A custom host avoids Calendly's automatic initialization scanner.
+            if (!host.querySelector("iframe")) {
+                calendly.initInlineWidget({
+                    url: schedulingLink.href,
+                    parentElement: host
+                });
+            }
+            const iframe = host.querySelector("iframe");
+            if (!iframe) throw new Error("Calendly embed unavailable");
+            iframe.title = "Schedule a 30-minute meeting with Apple Balbarino";
+            // Calendly supplies its own loading UI from here. This is not a booking confirmation.
+            status.hidden = true;
+            card.dataset.state = "ready";
+        }).catch(() => {
+            host.hidden = true;
+            status.hidden = false;
+            status.textContent = "The scheduler couldn't load. You can still choose a time on Calendly below.";
+            card.dataset.state = "failed";
+        });
+        return embedPromise;
+    }
+
+    if ("IntersectionObserver" in window) {
+        const preloadObserver = new IntersectionObserver(entries => {
+            if (!entries.some(entry => entry.isIntersecting)) return;
+            preloadObserver.disconnect();
+            initCalendlyEmbed();
+        }, { rootMargin: "600px 0px", threshold: 0 });
+        preloadObserver.observe(card);
+    } else {
+        initCalendlyEmbed();
+    }
+}
+
 // INITIALIZE PAGE INTERACTIONS
 document.addEventListener("DOMContentLoaded", () => {
+    initMobileNavigation();
     type();
     initServicesCarousel();
     initCareerHighlights();
     initAboutAnimation();
     initSectionReveals();
+    initContactSection();
 });
 
 // MY WORKS: independent state for each gallery; no Services carousel globals.
@@ -538,12 +915,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const previous = button(`Previous ${name} item`, "\u2190");
         const next = button(`Next ${name} item`, "\u2192");
-        const rotation = button(`Pause ${name} automatic sliding`, "Pause", "work-control--rotation");
+        const rotation = button(`Autoplay ${name} carousel`, "Autoplay", "work-control--rotation");
+        rotation.setAttribute("role", "switch");
+        const switchTrack = document.createElement("span");
+        switchTrack.className = "work-autoplay-track";
+        switchTrack.setAttribute("aria-hidden", "true");
+        rotation.append(switchTrack);
         const position = document.createElement("span");
         position.className = "work-position";
         position.setAttribute("aria-live", "off");
         position.setAttribute("aria-atomic", "true");
-        controls.append(previous, position, next, rotation);
+        const navigation = document.createElement("div");
+        navigation.className = "work-navigation";
+        navigation.append(previous, position, next);
+        controls.append(navigation, rotation);
         carousel.append(controls);
         carousel.setAttribute("aria-roledescription", "carousel");
         track.setAttribute("aria-label", `${name}: use left and right arrow keys or swipe to explore`);
@@ -698,9 +1083,10 @@ document.addEventListener("DOMContentLoaded", () => {
         previous.addEventListener("click", () => move(-1, true));
         next.addEventListener("click", () => move(1, true));
         rotation.addEventListener("click", () => {
+            if (motion.matches) return;
             userPaused = !userPaused;
-            rotation.textContent = userPaused ? "Resume" : "Pause";
-            rotation.setAttribute("aria-label", `${userPaused ? "Resume" : "Pause"} ${name} automatic sliding`);
+            rotation.setAttribute("aria-checked", String(!userPaused));
+            if (!userPaused) idleUntil = 0; // A fresh full dwell, even after manual navigation.
             schedule();
         });
         carousel.addEventListener("focusin", () => schedule());
@@ -760,6 +1146,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         function refresh() {
             rotation.hidden = motion.matches;
+            rotation.disabled = motion.matches;
+            rotation.setAttribute("aria-checked", String(!userPaused && !motion.matches));
             if (motion.matches) finishMove();
             syncVideos();
             schedule();
@@ -793,11 +1181,26 @@ document.addEventListener("DOMContentLoaded", () => {
     // Native dialog supplies Escape, modal focus containment, and inert background.
     // The original image links remain useful if dialog support or scripting is absent.
     if (!dialog || typeof dialog.showModal !== "function") return;
+    const lightboxContent = dialog.querySelector(".work-lightbox-content");
     const expanded = dialog.querySelector(".work-lightbox-image");
     const viewport = dialog.querySelector(".work-lightbox-viewport");
     const zoom = dialog.querySelector(".work-lightbox-zoom");
     let opener;
     let previousOverflow;
+    function updateFitInset() {
+        if (!dialog.open) return;
+        let inset = 0;
+        if (!viewport.classList.contains("work-lightbox-viewport--zoomed") && expanded.naturalWidth && expanded.naturalHeight) {
+            // object-fit centers the visible pixels inside the height-capped image box.
+            const box = expanded.getBoundingClientRect();
+            const visibleWidth = Math.min(box.width, box.height * expanded.naturalWidth / expanded.naturalHeight);
+            inset = Math.max(0, (box.width - visibleWidth) / 2);
+        }
+        lightboxContent.style.setProperty("--work-lightbox-fit-inset", `${inset}px`);
+    }
+    expanded.addEventListener("load", updateFitInset);
+    const fitObserver = new ResizeObserver(updateFitInset);
+    fitObserver.observe(expanded);
     section.querySelectorAll(".work-expand").forEach(link => {
         link.setAttribute("aria-haspopup", "dialog");
         link.addEventListener("click", event => {
@@ -813,6 +1216,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.body.style.overflow = "hidden";
             modalOpen = true;
             dialog.showModal();
+            updateFitInset();
             refreshAll();
         });
     });
@@ -821,6 +1225,7 @@ document.addEventListener("DOMContentLoaded", () => {
         zoom.textContent = zoomed ? "Fit image" : "Zoom in";
         zoom.setAttribute("aria-pressed", String(zoomed));
         viewport.scrollTo(0, 0);
+        updateFitInset();
         if (zoomed) viewport.focus({ preventScroll: true });
     });
     dialog.querySelector(".work-lightbox-close").addEventListener("click", () => dialog.close());
