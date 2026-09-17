@@ -57,7 +57,6 @@ nav {
 
 .logo span{
     color: rgb(154, 131, 101);
-    text-shadow: 0 0 10px rgb((154, 131, 101))
 }
 
 .hamburg {
@@ -124,7 +123,7 @@ nav {
 
 .nav-container .contact-btn a{
     color: black;
-    transition: 0.3 linear;
+    transition: 0.3s linear;
 }
 
 .nav-container .contact-btn:hover{
@@ -279,7 +278,7 @@ section {
 
 @keyframes words {
     0%, 33%{
-        content: " Virtual Assistant";
+        content: " Real Estate VA";
     }
     34%, 66%{
         content: " Sales Representative"
@@ -341,7 +340,7 @@ section {
 }
 }
 
-.content button,
+.content .cv-button,
 .content .works-button{
     min-width: 9rem;
     max-width: 100%;
@@ -364,7 +363,7 @@ section {
 
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-.content button:hover,
+.content .cv-button:hover,
 .content .works-button:hover{
     scale: 1.1;
     color: rgb(154, 131, 101);
@@ -871,7 +870,7 @@ section {
 }
 .work-video-toggle .fa-play { margin-left: 2px; } /* Optical centering for the triangle. */
 .work-slide--active .work-video-toggle { visibility: visible; }
-.my-works :focus-visible, .works-button:focus-visible { outline: 2px solid rgb(110, 93, 73); outline-offset: 4px; }
+.my-works :focus-visible, .works-button:focus-visible, .cv-button:focus-visible { outline: 2px solid rgb(110, 93, 73); outline-offset: 4px; }
 .work-video-toggle:focus-visible { outline-color: #fffaf2; }
 
 .work-lightbox {
@@ -944,6 +943,7 @@ section {
   text-align: center;              /* center align */
 }
 /* --- Skills grid: desktop 4 columns, responsive down to 1 column --- */
+/* ===== SKILLS GRID (keeps your 4-per-row on desktop) ===== */
 .skills-grid {
   display: flex;
   flex-wrap: wrap;
@@ -1036,12 +1036,6 @@ section {
 }
 
 /* Services Section */
-.services-section {
-    width: 100%;
-    padding: 60px 16px;
-    background: rgba(244, 231, 209, 0.1);
-}
-
 /* Desktop layout: text left, 3 images in a row on the right */
 /* ===== SERVICES SECTION ===== */
 .services-section {
@@ -1199,17 +1193,6 @@ section {
 .services-carousel-arrow:hover i {
   transform: translateX(3px);
 }
-}
-
-/* ===== SKILLS GRID (keeps your 4-per-row on desktop) ===== */
-.skills-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 20px;
-  max-width: clamp(70rem, 60rem + 8.333vw, 80rem);
-  margin: 0 auto 60px;
-  padding: 0 16px;
 }
 
 /* ===== CONTACT: editorial closing, email first, then the live scheduler ===== */

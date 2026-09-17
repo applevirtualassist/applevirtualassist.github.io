@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://applevirtualassist.github.io/sitemap.xml
