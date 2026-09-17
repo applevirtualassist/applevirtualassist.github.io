@@ -87,7 +87,9 @@ function initCareerHighlights() {
         function updateCounters(now) {
             const progress = Math.min((now - startTime) / duration, 1);
             counters.forEach(({ element, target }) => {
-                element.textContent = String(Math.floor(progress * target));
+                // A target of one has no intermediate integers; resolve it at 800ms.
+                const countProgress = target === 1 ? Math.min((now - startTime) / 800, 1) : progress;
+                element.textContent = String(Math.floor(countProgress * target));
             });
             if (progress < 1) frameId = requestAnimationFrame(updateCounters);
         }
@@ -555,12 +557,17 @@ function initMobileNavigation() {
 function initInternalNavigation() {
     const nav = document.querySelector("nav");
     const sections = Array.from(document.querySelectorAll(".portfolio-section[id]"));
+    const navLinks = Array.from(nav.querySelectorAll('a[href^="#"]'));
     const mobile = window.matchMedia("(max-width: 1024px)");
+    const presentationViewport = window.matchMedia("(min-width: 1101px) and (max-height: 1150px)");
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const gap = 24;
     const initialHash = window.location.hash;
     let initialPending = Boolean(resolveSection(initialHash));
     let resizeFrame;
+    let activeFrame;
+    let activeHash;
+    let navigationIntent;
     // A direct fragment load should start at its destination, not animate from Home.
     if (initialPending) document.documentElement.style.scrollBehavior = "auto";
 
@@ -591,17 +598,102 @@ function initInternalNavigation() {
         return top;
     }
 
+    function manualReadingDepth(navHeight) {
+        return Math.min(280, Math.max(120, (window.innerHeight - navHeight) * .22));
+    }
+
+    function destinationOffset(section) {
+        const navHeight = nav.getBoundingClientRect().height;
+        let landingGap = gap;
+        if (presentationViewport.matches && (section.id === "about" || section.id === "my-works" || section.id === "services")) {
+            const extraGap = Math.min(80, Math.max(40, (window.innerHeight - navHeight) * .08));
+            // Leave the anchor above the unchanged reading line when intent releases.
+            landingGap = Math.min(gap + extraGap, manualReadingDepth(navHeight) - 16);
+        }
+        return navHeight + landingGap;
+    }
+
     function destination(section) {
-        return Math.max(0, layoutTop(visualAnchor(section)) - nav.getBoundingClientRect().height - gap);
+        return Math.max(0, layoutTop(visualAnchor(section)) - destinationOffset(section));
     }
 
     function refreshNativeOffsets() {
-        const offset = nav.getBoundingClientRect().height + gap;
         sections.forEach(section => {
+            const offset = destinationOffset(section);
             const inset = layoutTop(visualAnchor(section)) - layoutTop(section);
             section.style.scrollMarginTop = `${offset - inset}px`;
         });
     }
+
+    function setActiveSection(hash) {
+        if (hash === activeHash) return;
+        activeHash = hash;
+        navLinks.forEach(link => {
+            const active = link.getAttribute("href") === hash;
+            link.classList.toggle("is-active", active);
+            if (active) link.setAttribute("aria-current", "location");
+            else link.removeAttribute("aria-current");
+        });
+    }
+
+    function reachableDestination(section) {
+        const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        return Math.min(section ? destination(section) : 0, maxScroll);
+    }
+
+    function updateCurrentSection() {
+        activeFrame = null;
+        if (navigationIntent) {
+            const top = reachableDestination(navigationIntent.section);
+            // Keep the existing alignment if a resize or late layout shift moves it.
+            if (Math.abs(top - navigationIntent.top) > 1) {
+                navigationIntent.top = top;
+                window.scrollTo({ top, behavior: motion.matches ? "instant" : "smooth" });
+            }
+            if (Math.abs(window.scrollY - top) > 2) {
+                queueCurrentSection();
+                return; // The clicked destination owns the indicator until arrival.
+            }
+            navigationIntent = null;
+        }
+        const navHeight = nav.getBoundingClientRect().height;
+        const readingDepth = manualReadingDepth(navHeight);
+        const probe = window.scrollY + navHeight + readingDepth;
+        let hash = "#"; // Hero and Career Highlights both belong to Home.
+        sections.forEach(section => {
+            // Allow only subpixel scroll rounding at the same anchor used by clicks.
+            if (layoutTop(visualAnchor(section)) <= probe + 1) hash = `#${section.id}`;
+        });
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        if (maxScroll > 0 && window.scrollY >= maxScroll - 2) hash = "#contact-me";
+        setActiveSection(hash);
+    }
+
+    function queueCurrentSection() {
+        if (activeFrame == null) activeFrame = requestAnimationFrame(updateCurrentSection);
+    }
+    window.addEventListener("scroll", event => {
+        if (event.target === document || event.target === document.body) queueCurrentSection();
+    }, { passive: true, capture: true });
+
+    function interruptNavigation(event) {
+        if (!navigationIntent || event.defaultPrevented) return;
+        if (event.type === "keydown") {
+            if (event.ctrlKey || event.metaKey || event.altKey ||
+                !["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) return;
+            const target = event.target;
+            if (target.isContentEditable || target.closest("input, textarea, select, video, audio") ||
+                (event.key === " " && target.closest("button, [role='button']"))) return;
+        }
+        navigationIntent = null;
+        // Stop the native animation so it cannot carry on after the user's gesture.
+        window.scrollTo({ top: window.scrollY, behavior: "instant" });
+        queueCurrentSection();
+    }
+    ["wheel", "touchstart", "touchmove"].forEach(type => {
+        window.addEventListener(type, interruptNavigation, { passive: true });
+    });
+    window.addEventListener("keydown", interruptNavigation);
 
     document.addEventListener("click", event => {
         const link = event.target.closest('a[href^="#"]');
@@ -620,30 +712,55 @@ function initInternalNavigation() {
             history.pushState(null, "", nextHash || window.location.pathname + window.location.search);
         }
         if (!section) document.body.scrollTop = 0;
+        navigationIntent = navLinks.includes(link) ? { section, top: reachableDestination(section) } : null;
+        if (navigationIntent) setActiveSection(section ? `#${section.id}` : "#");
         window.scrollTo({ top: section ? destination(section) : 0, behavior: motion.matches ? "instant" : "smooth" });
+        queueCurrentSection();
     });
 
     window.addEventListener("hashchange", () => {
         const section = resolveSection(window.location.hash);
         if (window.location.hash && !section) return;
         initialPending = false;
+        navigationIntent = null;
         refreshNativeOffsets();
         // Back/Forward may restore an old page offset after native body scrolling.
         // Correct in the same event, before paint; clicks use pushState and skip this.
         if (!section) document.body.scrollTop = 0;
         window.scrollTo({ top: section ? destination(section) : 0, behavior: "instant" });
+        queueCurrentSection();
     });
 
     function queueOffsets() {
         cancelAnimationFrame(resizeFrame);
-        resizeFrame = requestAnimationFrame(refreshNativeOffsets);
+        resizeFrame = requestAnimationFrame(() => {
+            refreshNativeOffsets();
+            queueCurrentSection();
+        });
     }
     window.addEventListener("resize", queueOffsets);
-    if ("ResizeObserver" in window) new ResizeObserver(queueOffsets).observe(nav);
+    window.addEventListener("orientationchange", queueOffsets);
+    window.addEventListener("pageshow", event => {
+        if (event.persisted) navigationIntent = null;
+        queueOffsets();
+    });
+    mobile.addEventListener("change", queueOffsets);
+    // Images, fonts, responsive content and the Calendly embed can move anchors.
+    document.addEventListener("load", queueOffsets, true);
+    if (document.fonts) {
+        document.fonts.ready.then(queueOffsets);
+        document.fonts.addEventListener("loadingdone", queueOffsets);
+    }
+    if ("ResizeObserver" in window) {
+        const layoutObserver = new ResizeObserver(queueOffsets);
+        [nav, document.body, ...document.querySelectorAll("section, [data-scroll-anchor], [data-scroll-anchor-mobile]")]
+            .forEach(element => layoutObserver.observe(element));
+    }
 
     // Run before the browser's initial fragment positioning. Native hash changes
     // and history traversal can then use the same measured, animation-free inset.
     refreshNativeOffsets();
+    updateCurrentSection();
     const cancelInitial = () => { initialPending = false; };
     const intentEvents = ["wheel", "touchstart", "pointerdown", "keydown"];
     intentEvents.forEach(type => window.addEventListener(type, cancelInitial, { once: true, passive: true }));
@@ -659,6 +776,7 @@ function initInternalNavigation() {
         }
         document.documentElement.style.removeProperty("scroll-behavior");
         intentEvents.forEach(type => window.removeEventListener(type, cancelInitial));
+        updateCurrentSection();
     }, { once: true });
 }
 

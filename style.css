@@ -109,7 +109,8 @@ nav {
     transition: 0.2s linear;
 }
 
-.nav-container .links a:hover::before{
+.nav-container .links a:hover::before,
+.nav-container .links a.is-active::before{
     width: 100%;
 }
 
@@ -179,6 +180,7 @@ nav {
 }
 
 .dropdown .social-links a:focus-visible,
+.dropdown .social-links a.is-active,
 .dropdown .social-links a:active {
     background: rgba(154, 131, 101, .14);
 }
