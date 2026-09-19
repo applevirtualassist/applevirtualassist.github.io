@@ -63,9 +63,11 @@ function initCareerHighlights() {
     let started = false;
     let frameId;
     let observer;
-    let scrollIntent = false;
-    const pageScrollY = () => window.scrollY;
-    let lastScrollY = pageScrollY();
+    let checkFrame;
+    const initialScrollY = window.scrollY;
+    const scrollTolerance = 3;
+    let hasPageProgressed = initialScrollY > scrollTolerance;
+    const items = Array.from(section.querySelectorAll(".career-highlights > li"));
     const duration = 1800;
 
     counters.forEach(({ element }) => { element.textContent = "0"; });
@@ -78,8 +80,7 @@ function initCareerHighlights() {
     function startCounters() {
         if (started) return;
         started = true;
-        observer.disconnect();
-        window.removeEventListener("resize", observeHighlights);
+        stopMonitoring();
         revealHighlights();
         section.classList.add("career-highlights--drawing");
         const startTime = performance.now();
@@ -97,58 +98,60 @@ function initCareerHighlights() {
         frameId = requestAnimationFrame(updateCounters);
     }
 
-    function noteScrollIntent(event) {
-        if (event.type === "keydown") {
-            const target = event.target;
-            if (target.isContentEditable || target.matches("input, textarea, select")) return;
-            if (!["ArrowDown", "PageDown", "End", " "].includes(event.key)) return;
-        }
-        scrollIntent = true;
-    }
-
-    function removeScrollListeners() {
-        window.removeEventListener("wheel", noteScrollIntent);
-        window.removeEventListener("touchmove", noteScrollIntent);
-        window.removeEventListener("keydown", noteScrollIntent);
-        window.removeEventListener("scroll", observeAfterScroll, true);
+    function stopMonitoring() {
+        if (observer) observer.disconnect();
+        window.removeEventListener("scroll", queueCareerCheck);
+        window.removeEventListener("resize", observeHighlights);
+        cancelAnimationFrame(checkFrame);
+        checkFrame = null;
     }
 
     function observeHighlights() {
         if (started) return;
         if (observer) observer.disconnect();
         observer = new IntersectionObserver(entries => {
-            if (entries.some(entry => entry.isIntersecting)) startCounters();
+            if (hasPageProgressed && entries.some(entry => entry.isIntersecting)) startCounters();
         }, readingZoneOptions());
         // Individual items can enter the reading zone even in a short mobile viewport.
-        section.querySelectorAll(".career-highlights > li").forEach(item => observer.observe(item));
+        items.forEach(item => observer.observe(item));
+        queueCareerCheck();
     }
 
-    function observeAfterScroll(event) {
-        if (event.target !== document && event.target !== document.body) return;
-        const currentScrollY = pageScrollY();
-        const movedDown = currentScrollY > lastScrollY;
-        lastScrollY = currentScrollY;
-        if (!scrollIntent || !movedDown) return;
+    function evaluateCareerHighlights() {
+        if (started) return;
+        if (Math.abs(window.scrollY - initialScrollY) > scrollTolerance) hasPageProgressed = true;
+        if (!hasPageProgressed) return;
 
-        removeScrollListeners();
-        observeHighlights();
-        window.addEventListener("resize", observeHighlights);
+        // Match readingZoneOptions(), including the rendered navbar and bottom inset.
+        const navBottom = Math.ceil(document.querySelector("nav").getBoundingClientRect().bottom);
+        const readingBottom = window.innerHeight - Math.round(window.innerHeight * .16);
+        const alreadyPassed = section.getBoundingClientRect().bottom <= navBottom;
+        const inReadingZone = readingBottom > navBottom && items.some(item => {
+            const rect = item.getBoundingClientRect();
+            return rect.bottom > navBottom && rect.top < readingBottom;
+        });
+        // Catch jumps that skip every intersecting frame, as well as normal entry.
+        if (alreadyPassed || inReadingZone) startCounters();
     }
 
-    // A tall viewport or restored scroll position must not start counting on refresh.
-    // Wait for intentional downward scrolling, then let visibility trigger the animation.
-    window.addEventListener("wheel", noteScrollIntent, { passive: true });
-    window.addEventListener("touchmove", noteScrollIntent, { passive: true });
-    window.addEventListener("keydown", noteScrollIntent);
-    window.addEventListener("scroll", observeAfterScroll, { passive: true, capture: true });
+    function queueCareerCheck() {
+        if (checkFrame != null || started) return;
+        checkFrame = requestAnimationFrame(() => {
+            checkFrame = null;
+            evaluateCareerHighlights();
+        });
+    }
+
+    // Monitor immediately; untouched Home still waits for actual page movement.
+    window.addEventListener("scroll", queueCareerCheck, { passive: true });
+    window.addEventListener("resize", observeHighlights);
+    observeHighlights();
 
     // Also honor a preference change while waiting or counting, without restarting.
     motionQuery.addEventListener("change", event => {
         if (!event.matches) return;
         started = true;
-        removeScrollListeners();
-        window.removeEventListener("resize", observeHighlights);
-        if (observer) observer.disconnect();
+        stopMonitoring();
         cancelAnimationFrame(frameId);
         revealHighlights();
         section.classList.remove("career-highlights--ink-ready", "career-highlights--drawing");
@@ -206,16 +209,19 @@ function initAboutAnimation() {
     let started = false;
     let frame;
     let visibilityTimer;
+    let visibilityFrame;
     let nextLetter = 0;
     let titleStarted = false;
     const container = text.closest(".about-container");
     const services = document.getElementById("services");
 
     function removeListeners() {
-        window.removeEventListener("scroll", checkVisibility, true);
-        window.removeEventListener("resize", checkVisibility);
-        container.removeEventListener("transitionend", checkVisibility);
+        window.removeEventListener("scroll", queueVisibilityCheck, true);
+        window.removeEventListener("resize", queueVisibilityCheck);
+        window.removeEventListener("load", queueVisibilityCheck);
+        container.removeEventListener("transitionend", queueVisibilityCheck);
         clearTimeout(visibilityTimer);
+        cancelAnimationFrame(visibilityFrame);
     }
 
     function finish() {
@@ -227,21 +233,14 @@ function initAboutAnimation() {
         text.classList.remove("about-text--typing", "about-text--title-animated");
     }
 
-    function isFullyInView() {
+    function isInReadingPosition() {
         const rect = text.getBoundingClientRect();
-        const sectionRect = container.getBoundingClientRect();
         const navBottom = document.querySelector("nav").getBoundingClientRect().bottom + 16;
         const viewportBottom = window.innerHeight - 16;
-        const availableHeight = viewportBottom - navBottom;
-        if (window.AOS && !container.classList.contains("aos-animate")) return false;
-        if (sectionRect.height <= availableHeight) {
-            return sectionRect.top >= navBottom && sectionRect.bottom <= viewportBottom;
-        }
-        // On stacked mobile layouts the section is taller than the screen.
-        // Require the title and opening paragraph to be fully in the reading area.
-        const bottom = rect.height <= availableHeight
-            ? rect.bottom : paragraphs[0].getBoundingClientRect().bottom;
-        return rect.top >= navBottom && bottom <= viewportBottom;
+        const readingLine = navBottom + Math.max(0, viewportBottom - navBottom) * .65;
+        // The beginning of the text has reached the reading area below the navbar.
+        // Neither the portrait nor a whole paragraph needs to fit on screen.
+        return rect.top <= readingLine && rect.bottom > navBottom;
     }
 
     function startTyping() {
@@ -263,15 +262,14 @@ function initAboutAnimation() {
         if (started && titleStarted) return;
         const navBottom = document.querySelector("nav").getBoundingClientRect().bottom;
         // Anchor jumps to Services, Skills or Contact also start the copy offscreen.
-        if (!started && services && services.getBoundingClientRect().top <= navBottom + 16) startTyping();
-        // Very short windows cannot fit even the opening paragraph. Keep the copy readable.
-        const openingHeight = paragraphs[0].getBoundingClientRect().bottom - text.getBoundingClientRect().top;
-        const readingHeight = window.innerHeight - document.querySelector("nav").getBoundingClientRect().bottom - 32;
-        if (openingHeight > readingHeight) { finish(); return; }
-        if (!isFullyInView()) return;
+        if (!started && (text.getBoundingClientRect().bottom <= navBottom + 16 ||
+            (services && services.getBoundingClientRect().top <= navBottom + 16))) startTyping();
+        if (!isInReadingPosition()) return;
+        // Preserve fade-up before typing, even if AOS missed its scroll threshold.
+        container.classList.add("aos-animate");
         // Let scrolling settle so a brief pass through the section does not trigger it.
         visibilityTimer = setTimeout(() => {
-            if (!isFullyInView()) return;
+            if (!isInReadingPosition()) return;
             startTyping();
             // Save the title's one-time hop for when About Me is actually in view.
             titleStarted = true;
@@ -280,9 +278,18 @@ function initAboutAnimation() {
         }, 180);
     }
 
-    window.addEventListener("scroll", checkVisibility, { passive: true, capture: true });
-    window.addEventListener("resize", checkVisibility);
-    container.addEventListener("transitionend", checkVisibility);
+    function queueVisibilityCheck() {
+        if (visibilityFrame != null || (started && titleStarted)) return;
+        visibilityFrame = requestAnimationFrame(() => {
+            visibilityFrame = null;
+            checkVisibility();
+        });
+    }
+
+    window.addEventListener("scroll", queueVisibilityCheck, { passive: true, capture: true });
+    window.addEventListener("resize", queueVisibilityCheck);
+    window.addEventListener("load", queueVisibilityCheck, { once: true });
+    container.addEventListener("transitionend", queueVisibilityCheck);
     motion.addEventListener("change", event => { if (event.matches) finish(); });
     checkVisibility();
 }
