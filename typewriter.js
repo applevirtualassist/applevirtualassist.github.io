@@ -984,6 +984,26 @@ function initContactSection() {
     }
 }
 
+// Use the shared reveal's start event; Results needs no observer or navigation state.
+function initResultsHeading() {
+    const heading = document.getElementById("results-heading");
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (!heading || motion.matches || !heading.classList.contains("reveal-pending")) return;
+
+    heading.classList.add("results-heading--ink-ready");
+    const drawFlourish = event => {
+        if (event.target !== heading || event.animationName !== "section-reveal") return;
+        heading.classList.add("results-heading--drawing");
+        heading.removeEventListener("animationstart", drawFlourish);
+    };
+    heading.addEventListener("animationstart", drawFlourish);
+    motion.addEventListener("change", event => {
+        if (!event.matches) return;
+        heading.classList.remove("results-heading--ink-ready", "results-heading--drawing");
+        heading.removeEventListener("animationstart", drawFlourish);
+    });
+}
+
 // INITIALIZE PAGE INTERACTIONS
 document.addEventListener("DOMContentLoaded", () => {
     initMobileNavigation();
@@ -992,6 +1012,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initCareerHighlights();
     initAboutAnimation();
     initSectionReveals();
+    initResultsHeading();
     initContactSection();
 });
 

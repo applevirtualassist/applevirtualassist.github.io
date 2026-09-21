@@ -447,13 +447,15 @@ section {
 }
 
 .career-highlights--ink-ready .highlight-flourish path,
-.my-works-heading--ink-ready .highlight-flourish path {
+.my-works-heading--ink-ready .highlight-flourish path,
+.results-heading--ink-ready .highlight-flourish path {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
 }
 
 .career-highlights--drawing .highlight-flourish path,
-.my-works-heading--drawing .highlight-flourish path {
+.my-works-heading--drawing .highlight-flourish path,
+.results-heading--drawing .highlight-flourish path {
   animation: flourish-draw 2.2s cubic-bezier(.45, .05, .25, 1) .25s both;
 }
 
@@ -1654,6 +1656,120 @@ section {
   }
 }
 
+/* Results: two scrolling stages, with the existing My Works navigation ownership. */
+.results-in-numbers-section {
+  --results-heading-size: clamp(1.7rem, 1.35rem + 1vw, 2.3rem);
+  --results-top-space: clamp(2rem, 4vw, 4rem);
+  --results-heading-gap: clamp(1.5rem, 2.5vw, 3rem);
+  /* Width cap + available reading height preserve complete 1010:2000 mockups.
+     Reserve the navbar, title, title gap, top inset and bottom breathing room. */
+  --results-phone-max: min(23rem, calc((100svh - var(--nav-height) - var(--results-top-space) - var(--results-heading-size) * 1.5 - var(--results-heading-gap) - 3rem) * .505));
+  min-height: 0;
+  padding: 0 clamp(1rem, 4vw, 4rem);
+  color: rgb(110, 93, 73);
+}
+.results-container { max-width: 88rem; margin-inline: auto; }
+.results-stage--primary {
+  /* Keep row two just below the 1080p composition; cap empty space on taller screens. */
+  min-height: min(88svh, 60rem);
+  padding-top: var(--results-top-space);
+}
+.results-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 1.5vw, 24px);
+  margin-bottom: var(--results-heading-gap);
+  font-size: var(--results-heading-size);
+  line-height: 1.5;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.results-heading .highlight-flourish { flex-basis: 140px; min-width: 32px; height: 42px; }
+.results-heading > span { min-width: 0; }
+.results-phones {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, var(--results-phone-max)));
+  justify-content: center;
+  gap: clamp(2rem, 4vw, 5rem);
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+}
+.results-phone-wrap {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: var(--results-phone-max);
+  justify-self: center;
+}
+/* A small static gradient supplies depth without processing the image's alpha. */
+.results-phone-wrap::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: -1%;
+  height: 8%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center,
+    rgb(110 93 73 / .16) 0%,
+    rgb(110 93 73 / .09) 38%,
+    rgb(110 93 73 / 0) 72%);
+  opacity: .65;
+  transform: translateY(25%) scale(.92);
+  pointer-events: none;
+  z-index: -1;
+}
+.results-phone {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1010 / 2000;
+}
+.results-stage--secondary { padding-block: clamp(2rem, 3svh, 4rem) clamp(3rem, 5vw, 5rem); }
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .results-phone {
+    transition: transform 360ms cubic-bezier(.22, .61, .36, 1);
+  }
+  /* The wrapper completes its reveal before the image responds to hover. */
+  .results-phone-wrap:not(.reveal-pending):hover {
+    z-index: 2;
+  }
+  .results-phone-wrap:not(.reveal-pending):hover .results-phone {
+    transform: translate3d(0, -10px, 0) scale(1.05);
+  }
+}
+
+/* Short landscape viewports retain readable images and natural vertical flow. */
+@media (min-width: 1025px) and (max-height: 640px) {
+  .results-in-numbers-section { --results-phone-max: 18rem; }
+  .results-stage--primary { min-height: 0; }
+}
+@media (max-width: 1024px) {
+  .results-in-numbers-section { --results-phone-max: 21rem; padding-block: 2.5rem; }
+  .results-container {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 3rem clamp(1.5rem, 4vw, 3rem);
+    max-width: 46rem;
+  }
+  /* Flatten only the layout, preserving the six images' source order. */
+  .results-stage, .results-phones { display: contents; }
+  .results-heading { grid-column: 1 / -1; margin-bottom: 0; }
+}
+@media (max-width: 600px) {
+  .results-in-numbers-section { --results-phone-max: 20rem; --results-heading-size: clamp(1.25rem, 5vw, 1.7rem); }
+  .results-container { grid-template-columns: minmax(0, 1fr); }
+  .results-heading { gap: .5rem; letter-spacing: .1em; line-height: 1.4; }
+  .results-heading .highlight-flourish { flex-basis: 48px; min-width: 24px; height: 32px; }
+}
+
 /* Added by JS only; content remains visible without scripting or motion support. */
 .reveal-pending { opacity: 0; }
 .reveal-entering {
@@ -1662,9 +1778,12 @@ section {
 }
 
 @keyframes section-reveal {
-  from { opacity: 0; translate: 0 100px; }
+  from { opacity: 0; translate: 0 var(--section-reveal-distance, 100px); }
   to { opacity: 1; translate: 0 0; }
 }
+
+/* Keep the shared observer, stagger, completion and motion handling; soften this section's movement. */
+.results-in-numbers-section [data-scroll-reveal] { --section-reveal-distance: 24px; }
 
 /* A short dwell on entry and a soft release make everyday hovers easier to see. */
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
