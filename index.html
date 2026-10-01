@@ -73,18 +73,18 @@
     <main>
         <section class="hero-section">
             <div class="main-container">
-                <div class="image" data-aos="fade-in" data-aos-duration="1000">
+                <div class="image" data-hero-entrance="fade-in">
                     <img src="image.webp" alt="Apple Balbarino" width="1692" height="1692">
                 </div>
                 <div class="content">
-                    <h1 data-aos="fade-left" data-aos-duration="1000" data-aos-delay="800">Hey I'm <span>Apple</span></h1>
-                    <div class="Typewriter" data-aos="fade-right" data-aos-duration="1000" data-aos-delay="900">I'm a <span id="typed"></span></div>
-                    <div data-aos="fade-left" data-aos-duration="1000" data-aos-delay="1000"><p class="hero-introduction">Looking for someone to develop fresh content ideas and help your business stand out on social media? I’m Apple, a social media manager who creates engaging content that helps businesses grow their online presence and connect with potential clients. My experience spans <b>real estate, sales and logistics, and multimedia.</b> I create social media content and promotional designs that highlight each business’s services and attract potential clients. I&nbsp;also provide real estate virtual assistance through daily administrative support and lead follow-ups.</p></div>
-                    <div class="social-links" data-aos="flip-down" data-aos-duration="1000" data-aos-delay="1200" data-aos-offset="0">
+                    <h1 data-hero-entrance="fade-left" style="--hero-delay: 800ms;">Hey I'm <span>Apple</span></h1>
+                    <div class="Typewriter" data-hero-entrance="fade-right" style="--hero-delay: 900ms;">I'm a <span id="typed"></span></div>
+                    <div data-hero-entrance="fade-left" style="--hero-delay: 1000ms;"><p class="hero-introduction">Looking for someone to develop fresh content ideas and help your business stand out on social media? I’m Apple, a social media manager who creates engaging content that helps businesses grow their online presence and connect with potential clients. My experience spans <b>real estate, sales and logistics, and multimedia.</b> I create social media content and promotional designs that highlight each business’s services and attract potential clients. I&nbsp;also provide real estate virtual assistance through daily administrative support and lead follow-ups.</p></div>
+                    <div class="social-links" data-hero-entrance="flip-down" style="--hero-delay: 1200ms;">
                         <a href="https://www.linkedin.com/in/apple-balbarino/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fa-brands fa-linkedin" aria-hidden="true"></i></a>
                         <a href="https://www.facebook.com/apple.balbarino.54" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fa-brands fa-facebook" aria-hidden="true"></i></a>
                         </div>
-                        <div class="btn-container" data-aos="zoom-out-left" data-aos-duration="1000" data-aos-delay="1300" data-aos-offset="0">
+                        <div class="btn-container" data-hero-entrance="zoom-out-left" style="--hero-delay: 1300ms;">
                             <a class="cv-button" href="https://drive.google.com/file/d/1Ftl2rbQl9CM87xlS9A5IBFXWW5UsFhyY/view?usp=sharing" target="_blank" rel="noopener noreferrer">
                             View My CV
                             </a>
@@ -95,6 +95,62 @@
                 </div>
             </div>
         </section>
+        <script>
+        // Run beside the Hero, before the footer's CDN scripts can delay initialization.
+        // No hidden/pending class: finite CSS animations alone own the entrance state.
+        (() => {
+            const hero = document.querySelector(".hero-section");
+            const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+            const navigation = performance.getEntriesByType("navigation")[0];
+            // Native reload restoration can happen after this script. Remember
+            // the reading position on page exit, without monitoring live scrolling
+            // or changing history. Unknown reload positions safely stay visible.
+            const reloadKey = "hero-reload-position:" + location.pathname + location.search;
+            let restoredReload = navigation?.type === "reload";
+            try {
+                restoredReload = restoredReload && sessionStorage.getItem(reloadKey) !== "top";
+            } catch { /* Storage unavailable: keep reloads visible. */ }
+            window.addEventListener("pagehide", () => {
+                try {
+                    const atTop = window.scrollY <= 3 && document.body.scrollTop <= 3;
+                    sessionStorage.setItem(reloadKey, atTop ? "top" : "away");
+                } catch { /* Visibility never depends on storage access. */ }
+            });
+            // A late initializer must never hide already-painted content. Native
+            // fragments and restored pages keep their existing reading destination.
+            if (!hero || motion.matches || document.hidden || location.hash ||
+                navigation?.type === "back_forward" || restoredReload || window.scrollY > 3 ||
+                document.body.scrollTop > 3 || document.readyState !== "loading" ||
+                performance.getEntriesByType("paint").some(entry => entry.name === "first-contentful-paint")) return;
+
+            const listeners = new AbortController();
+            const options = { signal: listeners.signal };
+            let timeout;
+            function finish() {
+                hero.classList.remove("hero-entering");
+                clearTimeout(timeout);
+                listeners.abort();
+            }
+            // Install every escape path before enabling motion. Even if JS stops
+            // afterward, backwards-only fill returns to visible CSS after 2200ms.
+            hero.addEventListener("animationend", event => {
+                if (event.animationName === "hero-zoom-out-left") finish();
+            }, options);
+            hero.addEventListener("focusin", finish, options);
+            ["pagehide", "popstate", "hashchange", "orientationchange"].forEach(event => {
+                window.addEventListener(event, finish, options);
+            });
+            window.addEventListener("pageshow", event => {
+                if (event.persisted) finish();
+            }, options);
+            document.addEventListener("visibilitychange", finish, options);
+            motion.addEventListener("change", finish, options);
+            timeout = setTimeout(finish, 2500);
+            // Eligibility is committed here. Scrolling, touch gestures and browser
+            // chrome resizing the viewport must not interrupt the finite timeline.
+            hero.classList.add("hero-entering");
+        })();
+        </script>
         
          <!-- CAREER HIGHLIGHTS -->
           <section class="career-highlights-section" aria-labelledby="career-highlights-heading">

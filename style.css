@@ -340,8 +340,64 @@ section {
   }
 }
 
-/* Entrance effects enhance readable content only after AOS has initialized it. */
-.hero-section [data-aos]:not(.aos-init),
+/* Home is visible without JS or AOS. Only finite keyframes hide/move it, so
+   interrupted initialization cannot strand the CTAs in a pending state. */
+.hero-section [data-hero-entrance] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-section.hero-entering {
+    overflow-x: clip;
+  }
+  .hero-section.hero-entering [data-hero-entrance] {
+    animation: var(--hero-animation) var(--hero-duration, 900ms) ease var(--hero-delay, 0ms) 1 backwards;
+  }
+  .hero-section [data-hero-entrance="fade-in"] {
+    --hero-animation: hero-fade-in;
+    --hero-duration: 1000ms;
+  }
+  .hero-section [data-hero-entrance="fade-left"] { --hero-animation: hero-fade-left; }
+  .hero-section [data-hero-entrance="fade-right"] { --hero-animation: hero-fade-right; }
+  .hero-section [data-hero-entrance="flip-down"] { --hero-animation: hero-flip-down; }
+  .hero-section [data-hero-entrance="zoom-out-left"] { --hero-animation: hero-zoom-out-left; }
+  .hero-section.hero-entering [data-hero-entrance="flip-down"] { backface-visibility: hidden; }
+}
+
+/* Match AOS's approved distances, scale, perspective, easing and stagger. */
+@keyframes hero-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes hero-fade-left {
+  from { opacity: 0; transform: translate3d(100px, 0, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes hero-fade-right {
+  from { opacity: 0; transform: translate3d(-100px, 0, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes hero-flip-down {
+  from { transform: perspective(2500px) rotateX(100deg); }
+  to { transform: perspective(2500px) rotateX(0); }
+}
+@keyframes hero-zoom-out-left {
+  from { opacity: 0; transform: translate3d(100px, 0, 0) scale(1.2); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Keyboard access never waits for the entrance, even without its JS cleanup. */
+.hero-section:focus-within [data-hero-entrance] {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce), print {
+  .hero-section [data-hero-entrance] { animation: none !important; }
+}
+
+/* Keep the existing AOS fallback for About Me. */
 .about-container[data-aos]:not(.aos-init) {
   opacity: 1 !important;
   transform: none !important;
@@ -1870,7 +1926,6 @@ html.results-scroll-layout.results-restoring { scroll-behavior: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-section [data-aos],
   .about-container[data-aos] {
     opacity: 1 !important;
     transform: none !important;
