@@ -1190,7 +1190,8 @@ function initResultsEvidence() {
         return card;
     });
     let enhanced = false, committed = -1, desired = -1, front = 0, unavailable = false;
-    let revision = 0, animations = [], entranceAnimations = [], revealed = false;
+    let revision = 0, animations = [], screenAnimations = [], entranceAnimations = [], revealed = false;
+    let displayed = -1;
     let headingStartedAt = null, waitingForHeading = false;
     let navigation = null, navigationTimer = 0;
     let geometry = null, scrollFrame = 0, fitFrame = 0, wasVisible = false;
@@ -1209,6 +1210,21 @@ function initResultsEvidence() {
     const ease = "cubic-bezier(.22,.61,.36,1)";
     const headingLead = 350;
     const headingFallbackDelay = 2000;
+    const pointerHover = matchMedia("(hover: hover) and (pointer: fine)");
+
+    function suppressPointerHover() {
+        if (!pointerHover.matches || phone.classList.contains("results-hover-suppressed")) return;
+        phone.classList.add("results-hover-suppressed");
+        phone.addEventListener("pointermove", restorePointerHover, { passive: true });
+    }
+    function restorePointerHover(event) {
+        // Scrolling can synthesize boundary events under a stationary pointer.
+        // Only actual mouse/pen movement after the exchange restores pointer intent.
+        if (event.pointerType === "touch" || !(event.movementX || event.movementY) ||
+            section.classList.contains("results-swapping")) return;
+        phone.classList.remove("results-hover-suppressed");
+        phone.removeEventListener("pointermove", restorePointerHover);
+    }
 
     intro.addEventListener("animationstart", event => {
         if (event.target !== intro || event.animationName !== "section-reveal") return;
@@ -1242,7 +1258,7 @@ function initResultsEvidence() {
         entranceAnimations.forEach(animation => animation.cancel());
         entranceAnimations = [];
     }
-    function settle() {
+    function settleCards() {
         animations.forEach(animation => animation.cancel());
         animations = [];
         section.classList.remove("results-swapping");
@@ -1253,23 +1269,27 @@ function initResultsEvidence() {
             card.style.willChange = "";
             card.inert = true;
         });
+        near.style.visibility = committed > 0 ? "visible" : "hidden";
+        far.style.visibility = committed > 1 ? "visible" : "hidden";
+    }
+    function settleScreens() {
+        screenAnimations.forEach(animation => animation.cancel());
+        screenAnimations = [];
         screens.forEach((screen, index) => {
-            screen.style.opacity = index === front && !unavailable && committed >= 0 ? "1" : "0";
+            screen.style.opacity = index === front && !unavailable && displayed >= 0 ? "1" : "0";
             screen.style.zIndex = index === front ? "2" : "1";
             screen.style.willChange = "";
         });
     }
     function cancel(preserve = false) {
         revision++;
-        if (!preserve) settle();
+        if (!preserve) { settleCards(); settleScreens(); }
         loading.hidden = true;
         feature.setAttribute("aria-busy", "false");
     }
-    function labels(index, failed) {
+    function labels(index, failed, evidenceReady = true) {
         near.textContent = index > 0 ? `${number(index - 1)} · ${data[index - 1].title}` : "";
         far.textContent = index > 1 ? `${number(index - 2)} · ${data[index - 2].title}` : "";
-        near.style.visibility = index > 0 ? "visible" : "hidden";
-        far.style.visibility = index > 1 ? "visible" : "hidden";
         Array.from(summary.children).forEach((row, i) => row.classList.toggle("is-active", i === index + 1));
         Array.from(captions.children).forEach((caption, i) => {
             caption.classList.toggle("is-active", i === index);
@@ -1282,13 +1302,15 @@ function initResultsEvidence() {
         original.setAttribute("aria-label", data[index].link.getAttribute("aria-label"));
         phone.dataset.screenshotTitle = `${number(index)} / 06 · ${data[index].title}`;
         phone.dataset.screenshotDescription = data[index].image.alt;
-        phone.classList.toggle("is-unavailable", failed);
-        error.hidden = !failed;
+        if (evidenceReady) {
+            phone.classList.toggle("is-unavailable", failed);
+            error.hidden = !failed;
+        }
         section.dataset.resultsIndex = String(index);
     }
-    function animate(element, frames, options) {
+    function animate(element, frames, options, group = animations) {
         const animation = element.animate(frames, options);
-        animations.push(animation);
+        group.push(animation);
         animation.finished.catch(() => {});
         return animation;
     }
@@ -1296,13 +1318,14 @@ function initResultsEvidence() {
         if (!enhanced || document.hidden) return;
         if (index === desired && !force && !direct) return;
         desired = index;
+        suppressPointerHover();
         // Leave the current exchange on screen during decode. A newer request replaces
         // it from its sampled visual position, instead of snapping to a resting card.
         cancel(!direct);
         const ticket = revision;
-        if (index === committed && !force) {
-            Promise.allSettled(animations.map(animation => animation.finished)).then(() => {
-                if (ticket === revision) settle();
+        if (index === committed && index === displayed && !force) {
+            Promise.allSettled([...animations, ...screenAnimations].map(animation => animation.finished)).then(() => {
+                if (ticket === revision) { settleCards(); settleScreens(); }
             });
             return;
         }
@@ -1319,11 +1342,55 @@ function initResultsEvidence() {
             if (restoredIndex !== index) return select(restoredIndex, { direct: true });
             direct = true;
         }
-        // Decode the actual destination layer too, before a logical handoff.
-        // A reused buffer may still be visible below an unfinished screen dissolve.
-        // Let that short dissolve finish before changing its source (no frame flash).
-        await Promise.allSettled(screens.flatMap(screen => screen.getAnimations()).map(animation => animation.finished));
+        const old = committed;
+        const direction = index > old ? 1 : -1;
+        const moving = !direct && old >= 0 && old !== index && wasVisible;
+        if (old !== index || direct) {
+            // Batch the only pose reads at a milestone, before cancelling any effects.
+            const pose = element => {
+                const style = getComputedStyle(element);
+                return { opacity: style.visibility === "hidden" ? 0 : Number(style.opacity), transform: style.transform };
+            };
+            const visual = moving ? cards.map(pose) : [];
+            const edges = moving ? [near, far].map(pose) : [];
+            const order = moving ? cards.map(card => Number(card.style.zIndex) || 2) : [];
+            settleCards();
+            if (moving) {
+                suppressPointerHover();
+                section.classList.add("results-swapping");
+                cards.forEach((card, i) => {
+                    if (i !== index && visual[i].opacity <= 0) return;
+                    card.style.visibility = "visible";
+                    card.style.willChange = "transform, opacity";
+                    // Keep the existing overlap order when reversing visible cards.
+                    card.style.zIndex = visual[i].opacity > 0 ? order[i] : Math.max(...order) + 1;
+                    animate(card, [
+                        visual[i].opacity > 0 ? visual[i] : { opacity: 0, transform: `translateY(${26 * direction}px) scale(.99)` },
+                        { opacity: i === index ? 1 : 0, transform: i === index ? "translateY(0) scale(1)" : `translateY(${-26 * direction}px) scale(.99)` }
+                    ], { duration: 400, easing: ease, fill: "both" });
+                });
+                [[near, 6, .99], [far, 3, .995]].forEach(([edge, travel, scale], i) => {
+                    const opacity = index > i ? 1 : 0;
+                    if (!opacity && !edges[i].opacity) return;
+                    edge.style.visibility = "visible";
+                    animate(edge, [
+                        edges[i],
+                        { transform: `translateY(${-travel * direction}px) scale(${scale})`, offset: .42 },
+                        { opacity, transform: "translateY(0) scale(1)" }
+                    ], { duration: 400, easing: ease, fill: "both" });
+                });
+            }
+        }
+        committed = index;
+        labels(index, failed, false);
+        // Cards retarget immediately; the two screen buffers can finish their short
+        // dissolve safely without holding up a reversal or a newer milestone.
+        const exchange = Promise.allSettled(animations.map(animation => animation.finished)).then(() => {
+            if (ticket === revision) settleCards();
+        });
+        await Promise.allSettled(screenAnimations.map(animation => animation.finished));
         if (ticket !== revision || !enhanced || document.hidden) return;
+        settleScreens();
         const destination = 1 - front;
         if (!failed) {
             screens[destination].src = data[index].image.src;
@@ -1331,51 +1398,20 @@ function initResultsEvidence() {
         }
         if (ticket !== revision || !enhanced || document.hidden) return;
         loading.hidden = true;
-        const old = committed;
-        const direction = index > old ? 1 : -1;
-        const moving = !direct && old >= 0 && old !== index && wasVisible;
-        // Read before writes. This also preserves opacity on a rapid reversal.
-        const visual = cards.map(card => {
-            const style = getComputedStyle(card);
-            return { opacity: style.visibility === "hidden" ? 0 : Number(style.opacity), transform: style.transform };
-        });
-        const screenOpacity = getComputedStyle(screens[front]).opacity;
-        settle();
-        if (moving) {
-            section.classList.add("results-swapping");
-            const outgoing = cards[old], incoming = cards[index];
-            outgoing.style.willChange = incoming.style.willChange = "transform, opacity";
-            incoming.style.visibility = "visible";
-            incoming.style.opacity = "1";
-            incoming.style.zIndex = "4";
-            cards.forEach((card, i) => {
-                if (i === index || visual[i].opacity <= 0) return;
-                card.style.visibility = "visible";
-                animate(card, [visual[i], { opacity: 0, transform: `translateY(${-18 * direction}px) scale(.99)` }],
-                    { duration: 260, easing: ease, fill: "both" });
-            });
-            animate(incoming, [
-                visual[index].opacity > 0 ? visual[index] : { opacity: 0, transform: `translateY(${20 * direction}px) scale(.99)` },
-                { opacity: 1, transform: "translateY(0) scale(1)" }
-            ], { duration: 360, easing: "cubic-bezier(.2,.7,.25,1)", fill: "both" });
-            [[near, 6, .99], [far, 3, .995]].forEach(([edge, travel, scale]) => animate(edge, [
-                { transform: "translateY(0) scale(1)" },
-                { transform: `translateY(${-travel * direction}px) scale(${scale})`, offset: .42 },
-                { transform: "translateY(0) scale(1)" }
-            ], { duration: 360, easing: ease }));
-        }
-        committed = index;
         unavailable = failed;
         if (!failed) {
+            const dissolve = !direct && displayed >= 0 && displayed !== index && wasVisible && !phone.classList.contains("is-unavailable");
+            displayed = index;
             front = destination;
             screens[front].style.opacity = "1";
             screens[front].style.zIndex = "2";
             screens[1 - front].style.zIndex = "1";
-            if (moving && old >= 0 && !phone.classList.contains("is-unavailable")) {
+            if (dissolve) {
                 screens[front].style.willChange = "opacity";
-                // The previous screen stays opaque under the dissolve; the physical frame never swaps.
+                // The previous screen stays opaque; the physical frame never swaps.
                 screens[1 - front].style.opacity = "1";
-                animate(screens[front], [{ opacity: 1 - Number(screenOpacity) }, { opacity: 1 }], { duration: 200, easing: "ease-out", fill: "both" });
+                animate(screens[front], [{ opacity: 0 }, { opacity: 1 }],
+                    { duration: 190, easing: "ease-out", fill: "both" }, screenAnimations);
             }
         }
         labels(index, failed);
@@ -1383,9 +1419,10 @@ function initResultsEvidence() {
         feature.setAttribute("aria-busy", "false");
         if (failed) status.textContent = `Result ${index + 1}: ${data[index].title}. Evidence unavailable. Retry or use the full screenshot link.`;
         else if (explicit) status.textContent = `Result ${index + 1} of 6: ${data[index].title}. ${data[index].metric}${data[index].unit ? " " + data[index].unit : ""}.`;
-        try { await Promise.all(animations.map(animation => animation.finished)); } catch { return; }
+        await Promise.allSettled(screenAnimations.map(animation => animation.finished));
+        if (ticket === revision) settleScreens();
+        await exchange;
         if (ticket !== revision) return;
-        settle();
         if (!restoring) document.documentElement.classList.remove("results-restoring");
         if (wasVisible && !failed) {
             const adjacent = index + direction;
@@ -1447,6 +1484,7 @@ function initResultsEvidence() {
         if (!enhanced || scrollFrame || document.hidden) return;
         // Outside the section this is just a cached numeric range check, with no frame/layout work.
         if (!wasVisible && geometry && (scrollY + innerHeight < geometry.start + geometry.top || scrollY > geometry.end + geometry.height)) return;
+        suppressPointerHover();
         scrollFrame = requestAnimationFrame(onScroll);
     }
     function navigate(direction) {
