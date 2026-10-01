@@ -305,7 +305,7 @@ function initSectionReveals() {
     const elements = Array.from(document.querySelectorAll("[data-scroll-reveal]"));
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     document.querySelectorAll(".service-box, .skill-box").forEach(card => card.classList.add("hover-ready"));
-    if (motion.matches || !("IntersectionObserver" in window)) return;
+    if (motion.matches || !("IntersectionObserver" in window) || !CSS.supports("animation-name", "section-reveal")) return;
 
     const timers = new Map();
     let observer;
@@ -984,25 +984,677 @@ function initContactSection() {
     }
 }
 
-// Use the shared reveal's start event; Results needs no observer or navigation state.
-function initResultsHeading() {
-    const heading = document.getElementById("results-heading");
-    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (!heading || motion.matches || !heading.classList.contains("reveal-pending")) return;
+// One native screenshot viewer for both Content Management and Results.
+// Binding is optional: every trigger remains a working original-image link.
+function createScreenshotViewer(dialog, onOpenChange) {
+    if (!dialog || typeof dialog.showModal !== "function") return null;
+    const content = dialog.querySelector(".work-lightbox-content");
+    const expanded = dialog.querySelector(".work-lightbox-image");
+    const viewport = dialog.querySelector(".work-lightbox-viewport");
+    const zoom = dialog.querySelector(".work-lightbox-zoom");
+    const title = dialog.querySelector("h3");
+    const description = dialog.querySelector("#work-lightbox-description");
+    let opener, previousOverflow;
 
-    heading.classList.add("results-heading--ink-ready");
-    const drawFlourish = event => {
-        if (event.target !== heading || event.animationName !== "section-reveal") return;
-        heading.classList.add("results-heading--drawing");
-        heading.removeEventListener("animationstart", drawFlourish);
-    };
-    heading.addEventListener("animationstart", drawFlourish);
-    motion.addEventListener("change", event => {
-        if (!event.matches) return;
-        heading.classList.remove("results-heading--ink-ready", "results-heading--drawing");
-        heading.removeEventListener("animationstart", drawFlourish);
+    function updateFit() {
+        if (!dialog.open) return;
+        const zoomed = viewport.classList.contains("work-lightbox-viewport--zoomed");
+        let inset = 0;
+        if (!zoomed && !dialog.classList.contains("work-lightbox--portrait") && expanded.naturalWidth && expanded.naturalHeight) {
+            const box = expanded.getBoundingClientRect();
+            inset = Math.max(0, (box.width - Math.min(box.width, box.height * expanded.naturalWidth / expanded.naturalHeight)) / 2);
+        }
+        content.style.setProperty("--work-lightbox-fit-inset", `${inset}px`);
+        const style = getComputedStyle(dialog);
+        const available = dialog.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) -
+            dialog.querySelector(".work-lightbox-toolbar").offsetHeight - description.offsetHeight - parseFloat(getComputedStyle(content).gap) * 2;
+        content.style.setProperty("--work-lightbox-fit-height", `${Math.max(80, available)}px`);
+        content.style.setProperty("--work-lightbox-natural-width", `${expanded.naturalWidth || 1010}px`);
+    }
+    expanded.addEventListener("load", updateFit);
+    const resize = window.ResizeObserver ? new ResizeObserver(updateFit) : null;
+    window.addEventListener("resize", updateFit, { passive: true });
+    zoom.addEventListener("click", () => {
+        const zoomed = viewport.classList.toggle("work-lightbox-viewport--zoomed");
+        zoom.textContent = zoomed ? "Fit image" : "Zoom in";
+        zoom.setAttribute("aria-pressed", String(zoomed));
+        viewport.scrollTo(0, 0);
+        updateFit();
+        if (zoomed) viewport.focus({ preventScroll: true });
     });
+    dialog.querySelector(".work-lightbox-close").addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
+    dialog.addEventListener("close", () => {
+        resize?.disconnect();
+        if (previousOverflow) {
+            document.documentElement.style.overflow = previousOverflow[0];
+            document.body.style.overflow = previousOverflow[1];
+        }
+        viewport.classList.remove("work-lightbox-viewport--zoomed");
+        zoom.textContent = "Zoom in";
+        zoom.setAttribute("aria-pressed", "false");
+        viewport.scrollTo(0, 0);
+        // Resizing can switch between the desktop story and the complete pairs.
+        let target = opener;
+        if (target && !target.getClientRects().length) {
+            target = Array.from(document.querySelectorAll(".results-phone-link")).find(link => link.href === opener.href && link.getClientRects().length);
+        }
+        target?.focus({ preventScroll: true });
+        expanded.removeAttribute("src");
+        onOpenChange(false);
+    });
+    return {
+        bind(link, evidence) {
+            link.setAttribute("aria-haspopup", "dialog");
+            link.setAttribute("role", "button");
+            link.addEventListener("keydown", event => {
+                if (event.key === " ") { event.preventDefault(); if (!event.repeat) link.click(); }
+            });
+            link.addEventListener("click", event => {
+                if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button) return;
+                const item = evidence();
+                expanded.src = item.src;
+                expanded.alt = item.alt;
+                expanded.width = item.portrait ? 1010 : 2560;
+                expanded.height = item.portrait ? 2000 : 1440;
+                title.textContent = item.title;
+                description.textContent = item.alt;
+                dialog.classList.toggle("work-lightbox--portrait", Boolean(item.portrait));
+                // Only suppress native navigation after the modal has actually opened.
+                try { dialog.showModal(); } catch { return; }
+                event.preventDefault();
+                opener = link;
+                previousOverflow = [document.documentElement.style.overflow, document.body.style.overflow];
+                document.documentElement.style.overflow = "hidden";
+                document.body.style.overflow = "hidden";
+                onOpenChange(true);
+                updateFit();
+                resize?.observe(dialog);
+                resize?.observe(expanded);
+            });
+        }
+    };
 }
+
+// RESULTS: complete native pairs enhanced only when the whole sticky composition fits.
+// Input-scheduled transitions share one selection controller; navigation stays with My Works.
+function initResultsEvidence() {
+    const section = document.getElementById("results-in-numbers");
+    if (!section) return;
+    const baseline = section.querySelector(".results-pairs");
+    const intro = section.querySelector(".results-intro");
+    const pairs = Array.from(baseline.children);
+    const status = section.querySelector(".results-status");
+    const motion = matchMedia("(prefers-reduced-motion: reduce)");
+    // Native pairs remain available if any essential enhancement primitive is absent.
+    if (!Element.prototype.animate || !window.ResizeObserver || !window.IntersectionObserver ||
+        !CSS.supports("overflow-x", "clip") || !CSS.supports("clip-path", "url(#results-screen-clip)") ||
+        !("inert" in HTMLElement.prototype)) return;
+
+    const number = index => String(index + 1).padStart(2, "0");
+    const data = pairs.map(pair => ({
+        card: pair.querySelector(".results-card"),
+        title: pair.querySelector(".results-card-title").textContent,
+        metric: pair.querySelector(".results-card-metric").textContent,
+        unit: pair.querySelector(".results-card-unit")?.textContent || "",
+        caption: pair.querySelector("[data-results-caption]").textContent,
+        image: pair.querySelector("img"),
+        link: pair.querySelector("a")
+    }));
+    const story = document.createElement("div");
+    story.className = "results-story";
+    story.hidden = true;
+    story.innerHTML = `
+      <div class="results-stage" role="region" aria-label="Performance results" aria-roledescription="carousel">
+       <div class="results-composition">
+        <div class="results-entrance" aria-hidden="true"><div class="results-hover">
+          <div class="results-stack">
+            <div class="results-back results-back--far" aria-hidden="true"></div>
+            <div class="results-back results-back--near" aria-hidden="true"></div>
+            <div class="results-deck"></div>
+          </div>
+          <div class="results-next" aria-hidden="true"></div>
+        </div></div>
+        <figure class="results-feature">
+          <a class="results-phone-link results-phone-stage is-unavailable" href="phone1.webp">
+            <img class="results-frame" width="1010" height="2000" alt="" aria-hidden="true">
+            <img class="results-screen" width="1010" height="2000" alt="" aria-hidden="true">
+            <img class="results-screen" width="1010" height="2000" alt="" aria-hidden="true">
+            <span class="results-loading" hidden></span>
+            <span class="results-zoom-cue" aria-hidden="true">View full screenshot</span>
+          </a>
+          <div class="results-error" hidden><p>Evidence unavailable. Open the original or try again.</p><a data-results-error-original>View full screenshot</a><button type="button">Retry screenshot</button></div>
+          <figcaption class="results-caption">
+            <div class="results-controls">
+              <button type="button" data-results-previous aria-label="Previous result" aria-controls="results-active-deck"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg></button>
+              <div class="results-caption-copy"></div>
+              <button type="button" data-results-next aria-label="Next result" aria-controls="results-active-deck"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+            </div>
+          </figcaption>
+        </figure>
+       </div>
+      </div>
+      <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;pointer-events:none">
+        <defs><clipPath id="results-screen-clip" clipPathUnits="objectBoundingBox">
+          <path d="M .151485 .03 H .255446 V .0385 C .255446 .05258 .278497 .064 .307 .064 H .69505 C .723484 .064 .746535 .05258 .746535 .0385 V .03 H .848515 C .893354 .03 .929703 .048356 .929703 .071 V .93 C .929703 .952644 .893354 .971 .848515 .971 H .151485 C .106646 .971 .070297 .952644 .070297 .93 V .071 C .070297 .048356 .106646 .03 .151485 .03 Z" />
+        </clipPath></defs>
+      </svg>`;
+    baseline.before(story);
+    const stage = story.querySelector(".results-stage");
+    const composition = story.querySelector(".results-composition");
+    const deck = story.querySelector(".results-deck");
+    deck.id = "results-active-deck";
+    const entrance = story.querySelector(".results-entrance");
+    const feature = story.querySelector(".results-feature");
+    const phone = story.querySelector(".results-phone-stage");
+    const frame = story.querySelector(".results-frame");
+    const screens = Array.from(story.querySelectorAll(".results-screen"));
+    const far = story.querySelector(".results-back--far");
+    const near = story.querySelector(".results-back--near");
+    const summary = story.querySelector(".results-next");
+    const captions = story.querySelector(".results-caption-copy");
+    const original = phone;
+    const previous = story.querySelector("[data-results-previous]");
+    const next = story.querySelector("[data-results-next]");
+    const loading = story.querySelector(".results-loading");
+    const error = story.querySelector(".results-error");
+    // Keep retry outside the native image link, in the reserved phone footprint.
+    phone.after(error);
+    const cards = data.map((item, index) => {
+        const card = item.card.cloneNode(true);
+        card.removeAttribute("data-results-card");
+        card.querySelector("h3").id = `results-active-title-${index + 1}`;
+        card.setAttribute("role", "group");
+        card.setAttribute("aria-roledescription", "slide");
+        card.setAttribute("aria-label", `Result ${index + 1} of ${data.length}`);
+        card.setAttribute("aria-hidden", "true");
+        card.inert = true;
+        deck.append(card);
+        const caption = document.createElement("span");
+        const count = document.createElement("span");
+        count.dataset.resultsCount = "";
+        count.textContent = `${number(index)} / 06`;
+        const captionTitle = document.createElement("span");
+        captionTitle.textContent = item.caption;
+        caption.append(count, captionTitle);
+        caption.setAttribute("aria-hidden", "true");
+        captions.append(caption);
+        const row = document.createElement("div");
+        row.className = "results-next-row";
+        const label = document.createElement("span");
+        label.textContent = `${number(index)} · ${item.title}`;
+        const value = document.createElement("span");
+        value.textContent = `${item.metric}${item.unit ? " " + item.unit : ""}`;
+        row.append(label, value);
+        summary.append(row);
+        return card;
+    });
+    let enhanced = false, committed = -1, desired = -1, front = 0, unavailable = false;
+    let revision = 0, animations = [], entranceAnimations = [], revealed = false;
+    let headingStartedAt = null, waitingForHeading = false;
+    let navigation = null, navigationTimer = 0;
+    let geometry = null, scrollFrame = 0, fitFrame = 0, wasVisible = false;
+    let pairedLayout = null, readingSnapshot = null;
+    let restoring = performance.getEntriesByType("navigation")[0]?.type !== "navigate";
+    let baseAvailable = true;
+    const restoreKey = "apple-results-reading-position";
+    let checkpoint = null;
+    try {
+        const saved = JSON.parse(sessionStorage.getItem(restoreKey));
+        if (restoring && saved?.url === location.href && Number.isFinite(saved.progress) && saved.progress >= 0 && saved.progress <= data.length && saved.width === innerWidth && saved.height === innerHeight &&
+            (!location.hash || location.hash === "#results-in-numbers")) checkpoint = saved;
+    } catch { /* Storage is optional; current native position remains authoritative. */ }
+    if (restoring) document.documentElement.classList.add("results-restoring");
+    const cache = new Map();
+    const ease = "cubic-bezier(.22,.61,.36,1)";
+    const headingLead = 350;
+    const headingFallbackDelay = 2000;
+
+    intro.addEventListener("animationstart", event => {
+        if (event.target !== intro || event.animationName !== "section-reveal") return;
+        headingStartedAt = performance.now() - event.elapsedTime * 1000;
+        if (!waitingForHeading) return;
+        waitingForHeading = false;
+        // A missing heading event must never strand the content or cause a late replay.
+        if (entranceAnimations[0]?.currentTime >= headingFallbackDelay) return;
+        try {
+            entranceAnimations.forEach((animation, index) => {
+                animation.effect.updateTiming({ delay: headingLead + index * 100 });
+                animation.startTime = document.timeline.currentTime;
+            });
+        } catch { stopEntrance(); }
+    });
+
+    function ready(index) {
+        if (!cache.has(index)) {
+            const image = new Image();
+            image.src = data[index].image.getAttribute("src");
+            const promise = typeof image.decode === "function" ? image.decode() : new Promise((resolve, reject) => {
+                image.onload = resolve;
+                image.onerror = reject;
+            });
+            cache.set(index, promise.catch(reason => { cache.delete(index); throw reason; }));
+        }
+        return cache.get(index);
+    }
+    function stopEntrance() {
+        waitingForHeading = false;
+        entranceAnimations.forEach(animation => animation.cancel());
+        entranceAnimations = [];
+    }
+    function settle() {
+        animations.forEach(animation => animation.cancel());
+        animations = [];
+        section.classList.remove("results-swapping");
+        cards.forEach((card, index) => {
+            card.style.visibility = index === committed ? "visible" : "hidden";
+            card.style.opacity = index === committed ? "1" : "0";
+            card.style.zIndex = index === committed ? "3" : "2";
+            card.style.willChange = "";
+            card.inert = true;
+        });
+        screens.forEach((screen, index) => {
+            screen.style.opacity = index === front && !unavailable && committed >= 0 ? "1" : "0";
+            screen.style.zIndex = index === front ? "2" : "1";
+            screen.style.willChange = "";
+        });
+    }
+    function cancel(preserve = false) {
+        revision++;
+        if (!preserve) settle();
+        loading.hidden = true;
+        feature.setAttribute("aria-busy", "false");
+    }
+    function labels(index, failed) {
+        near.textContent = index > 0 ? `${number(index - 1)} · ${data[index - 1].title}` : "";
+        far.textContent = index > 1 ? `${number(index - 2)} · ${data[index - 2].title}` : "";
+        near.style.visibility = index > 0 ? "visible" : "hidden";
+        far.style.visibility = index > 1 ? "visible" : "hidden";
+        Array.from(summary.children).forEach((row, i) => row.classList.toggle("is-active", i === index + 1));
+        Array.from(captions.children).forEach((caption, i) => {
+            caption.classList.toggle("is-active", i === index);
+            caption.setAttribute("aria-hidden", String(i !== index));
+        });
+        previous.setAttribute("aria-disabled", String(index === 0));
+        next.setAttribute("aria-disabled", String(index === data.length - 1));
+        original.href = data[index].link.href;
+        error.querySelector("a").href = original.href;
+        original.setAttribute("aria-label", data[index].link.getAttribute("aria-label"));
+        phone.dataset.screenshotTitle = `${number(index)} / 06 · ${data[index].title}`;
+        phone.dataset.screenshotDescription = data[index].image.alt;
+        phone.classList.toggle("is-unavailable", failed);
+        error.hidden = !failed;
+        section.dataset.resultsIndex = String(index);
+    }
+    function animate(element, frames, options) {
+        const animation = element.animate(frames, options);
+        animations.push(animation);
+        animation.finished.catch(() => {});
+        return animation;
+    }
+    async function select(index, { direct = false, explicit = false, force = false } = {}) {
+        if (!enhanced || document.hidden) return;
+        if (index === desired && !force && !direct) return;
+        desired = index;
+        // Leave the current exchange on screen during decode. A newer request replaces
+        // it from its sampled visual position, instead of snapping to a resting card.
+        cancel(!direct);
+        const ticket = revision;
+        if (index === committed && !force) {
+            Promise.allSettled(animations.map(animation => animation.finished)).then(() => {
+                if (ticket === revision) settle();
+            });
+            return;
+        }
+        loading.textContent = `Loading result ${number(index)}…`;
+        loading.hidden = false;
+        feature.setAttribute("aria-busy", "true");
+        let failed = false;
+        try { await Promise.all([ready(index), frame.decode()]); } catch { failed = true; }
+        if (ticket !== revision || !enhanced || document.hidden) return;
+        // A cached reload may restore scroll between decoding and the first scroll frame.
+        if (restoring && geometry && scrollY >= geometry.start && scrollY <= geometry.end) {
+            const restoredIndex = resolveIndex(scrollY, false);
+            revealed = true;
+            if (restoredIndex !== index) return select(restoredIndex, { direct: true });
+            direct = true;
+        }
+        // Decode the actual destination layer too, before a logical handoff.
+        // A reused buffer may still be visible below an unfinished screen dissolve.
+        // Let that short dissolve finish before changing its source (no frame flash).
+        await Promise.allSettled(screens.flatMap(screen => screen.getAnimations()).map(animation => animation.finished));
+        if (ticket !== revision || !enhanced || document.hidden) return;
+        const destination = 1 - front;
+        if (!failed) {
+            screens[destination].src = data[index].image.src;
+            try { await screens[destination].decode(); } catch { failed = true; cache.delete(index); }
+        }
+        if (ticket !== revision || !enhanced || document.hidden) return;
+        loading.hidden = true;
+        const old = committed;
+        const direction = index > old ? 1 : -1;
+        const moving = !direct && old >= 0 && old !== index && wasVisible;
+        // Read before writes. This also preserves opacity on a rapid reversal.
+        const visual = cards.map(card => {
+            const style = getComputedStyle(card);
+            return { opacity: style.visibility === "hidden" ? 0 : Number(style.opacity), transform: style.transform };
+        });
+        const screenOpacity = getComputedStyle(screens[front]).opacity;
+        settle();
+        if (moving) {
+            section.classList.add("results-swapping");
+            const outgoing = cards[old], incoming = cards[index];
+            outgoing.style.willChange = incoming.style.willChange = "transform, opacity";
+            incoming.style.visibility = "visible";
+            incoming.style.opacity = "1";
+            incoming.style.zIndex = "4";
+            cards.forEach((card, i) => {
+                if (i === index || visual[i].opacity <= 0) return;
+                card.style.visibility = "visible";
+                animate(card, [visual[i], { opacity: 0, transform: `translateY(${-18 * direction}px) scale(.99)` }],
+                    { duration: 260, easing: ease, fill: "both" });
+            });
+            animate(incoming, [
+                visual[index].opacity > 0 ? visual[index] : { opacity: 0, transform: `translateY(${20 * direction}px) scale(.99)` },
+                { opacity: 1, transform: "translateY(0) scale(1)" }
+            ], { duration: 360, easing: "cubic-bezier(.2,.7,.25,1)", fill: "both" });
+            [[near, 6, .99], [far, 3, .995]].forEach(([edge, travel, scale]) => animate(edge, [
+                { transform: "translateY(0) scale(1)" },
+                { transform: `translateY(${-travel * direction}px) scale(${scale})`, offset: .42 },
+                { transform: "translateY(0) scale(1)" }
+            ], { duration: 360, easing: ease }));
+        }
+        committed = index;
+        unavailable = failed;
+        if (!failed) {
+            front = destination;
+            screens[front].style.opacity = "1";
+            screens[front].style.zIndex = "2";
+            screens[1 - front].style.zIndex = "1";
+            if (moving && old >= 0 && !phone.classList.contains("is-unavailable")) {
+                screens[front].style.willChange = "opacity";
+                // The previous screen stays opaque under the dissolve; the physical frame never swaps.
+                screens[1 - front].style.opacity = "1";
+                animate(screens[front], [{ opacity: 1 - Number(screenOpacity) }, { opacity: 1 }], { duration: 200, easing: "ease-out", fill: "both" });
+            }
+        }
+        labels(index, failed);
+        if (!failed && error.contains(document.activeElement)) original.focus({ preventScroll: true });
+        feature.setAttribute("aria-busy", "false");
+        if (failed) status.textContent = `Result ${index + 1}: ${data[index].title}. Evidence unavailable. Retry or use the full screenshot link.`;
+        else if (explicit) status.textContent = `Result ${index + 1} of 6: ${data[index].title}. ${data[index].metric}${data[index].unit ? " " + data[index].unit : ""}.`;
+        try { await Promise.all(animations.map(animation => animation.finished)); } catch { return; }
+        if (ticket !== revision) return;
+        settle();
+        if (!restoring) document.documentElement.classList.remove("results-restoring");
+        if (wasVisible && !failed) {
+            const adjacent = index + direction;
+            if (data[adjacent]) ready(adjacent).catch(() => {});
+        }
+    }
+    function resolveIndex(y, tolerance = true) {
+        const position = y - geometry.start;
+        const raw = Math.max(0, Math.min(data.length - 1, Math.floor(position / geometry.interval)));
+        if (!tolerance || desired < 0 || Math.abs(raw - desired) > 1) return raw;
+        const tolerancePx = Math.min(28, geometry.interval * .07);
+        if (raw > desired && position < (desired + 1) * geometry.interval + tolerancePx) return desired;
+        if (raw < desired && position > desired * geometry.interval - tolerancePx) return desired;
+        return raw;
+    }
+    function reveal() {
+        if (revealed || motion.matches || restoring || committed > 0 || document.activeElement && story.contains(document.activeElement)) { revealed = true; return; }
+        revealed = true;
+        const headingPending = intro.classList.contains("reveal-pending");
+        waitingForHeading = headingPending && headingStartedAt === null;
+        const lead = waitingForHeading ? headingFallbackDelay :
+            headingPending ? Math.max(0, headingLead - (performance.now() - headingStartedAt)) : 0;
+        // Opacity lives on the outer layers, independently of card, screen and hover
+        // transforms. Default CSS stays visible, including when animation creation fails.
+        // Backwards fill holds both layers until the heading leads. The finite native
+        // delay also reveals them if the heading's animationstart event never arrives.
+        try {
+            [[entrance, 0], [feature, 100]].forEach(([element, delay]) => {
+                const animation = element.animate([{ opacity: 0 }, { opacity: 1 }],
+                    { duration: 560, delay: lead + delay, easing: "ease-out", fill: "backwards" });
+                entranceAnimations.push(animation);
+                animation.finished.catch(() => {});
+            });
+        } catch { stopEntrance(); }
+    }
+    function onScroll() {
+        scrollFrame = 0;
+        if (!enhanced || !geometry || document.hidden) return;
+        const y = window.scrollY;
+        const visible = y + innerHeight > geometry.start + geometry.top && y < geometry.end + geometry.height;
+        if (!visible) {
+            if (wasVisible) { cancel(); stopEntrance(); desired = -1; }
+            wasVisible = false;
+            return;
+        }
+        const entering = !wasVisible;
+        wasVisible = true;
+        const index = navigation ? navigation.index : resolveIndex(y, !entering && !restoring);
+        if (navigation) {
+            clearTimeout(navigationTimer);
+            navigationTimer = setTimeout(finishNavigation, 140);
+        }
+        select(index, { direct: entering || restoring }).then(() => {
+            if (enhanced && wasVisible && !revealed && scrollY >= geometry.revealStart) reveal();
+        });
+    }
+    function scheduleScroll() {
+        rememberReading();
+        if (!enhanced || scrollFrame || document.hidden) return;
+        // Outside the section this is just a cached numeric range check, with no frame/layout work.
+        if (!wasVisible && geometry && (scrollY + innerHeight < geometry.start + geometry.top || scrollY > geometry.end + geometry.height)) return;
+        scrollFrame = requestAnimationFrame(onScroll);
+    }
+    function navigate(direction) {
+        const index = Math.max(0, Math.min(data.length - 1, (desired >= 0 ? desired : committed) + direction));
+        if (index === desired) return;
+        navigation = { index, top: geometry.start + (index + .5) * geometry.interval };
+        // Native smooth scroll only; the explicit destination owns selection until
+        // scrollend (or quiet-scroll fallback). User input immediately releases it.
+        window.scrollTo({ top: navigation.top, behavior: motion.matches ? "instant" : "smooth" });
+        clearTimeout(navigationTimer);
+        navigationTimer = setTimeout(finishNavigation, 1000);
+        wasVisible = true;
+        select(index, { explicit: true });
+    }
+    function finishNavigation() {
+        if (!navigation) return;
+        navigation = null;
+        clearTimeout(navigationTimer);
+        scheduleScroll();
+    }
+    function interruptNavigation(event) {
+        if (!navigation || event.type === "keydown" && !["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " ", "Tab", "Escape"].includes(event.key)) return;
+        if (event.type === "pointerdown" && event.target.closest?.(".results-controls")) return;
+        window.scrollTo({ top: scrollY, behavior: "instant" });
+        finishNavigation();
+    }
+    window.addEventListener("scrollend", () => {
+        if (navigation && Math.abs(scrollY - navigation.top) < 2) finishNavigation();
+    });
+    ["wheel", "touchstart", "pointerdown", "keydown"].forEach(type => window.addEventListener(type, interruptNavigation, { passive: true }));
+    previous.addEventListener("click", () => navigate(-1));
+    next.addEventListener("click", () => navigate(1));
+    error.querySelector("button").addEventListener("click", () => {
+        cache.delete(committed);
+        select(committed, { explicit: true, direct: true, force: true });
+    });
+    story.addEventListener("focusin", stopEntrance);
+    frame.addEventListener("error", () => { baseAvailable = false; measure(); });
+    ["wheel", "touchstart", "pointerdown", "keydown"].forEach(type => {
+        window.addEventListener(type, () => {
+            if (!restoring && !checkpoint) return;
+            checkpoint = null;
+            restoring = false;
+            document.documentElement.classList.remove("results-restoring");
+        }, { passive: true });
+    });
+    window.addEventListener("pagehide", () => {
+        finishNavigation();
+        try {
+            if (enhanced && geometry && scrollY >= geometry.start && scrollY <= geometry.end) {
+                sessionStorage.setItem(restoreKey, JSON.stringify({ url: location.href, width: innerWidth, height: innerHeight,
+                    progress: (scrollY - geometry.start) / geometry.interval }));
+            } else sessionStorage.removeItem(restoreKey);
+        } catch { /* Private or storage-disabled browsing still uses native restoration. */ }
+        cancel();
+        stopEntrance();
+    });
+    function restoreReading() {
+        if (!checkpoint || !enhanced || !geometry) return;
+        const top = geometry.start + checkpoint.progress * geometry.interval;
+        if (Math.abs(scrollY - top) > 1) window.scrollTo({ top, behavior: "instant" });
+        revealed = true;
+    }
+
+    function rememberReading() {
+        const layout = enhanced ? geometry : pairedLayout;
+        // Resize events arrive after reflow; retain the reading position from before reflow.
+        if (!layout || layout.width !== innerWidth || layout.viewportHeight !== innerHeight) return;
+        const line = scrollY + layout.top;
+        const index = enhanced ? resolveIndex(scrollY, false) : pairedLayout.positions.reduce((current, position, i) => position.top <= line + 2 ? i : current, 0);
+        const inside = enhanced ? scrollY >= geometry.start - geometry.height * .5 && scrollY <= geometry.end + geometry.height * .5 :
+            line >= pairedLayout.positions[0].top - innerHeight * .5 && line <= pairedLayout.positions.at(-1).bottom;
+        readingSnapshot = { index, inside, width: innerWidth, height: innerHeight };
+    }
+
+    function measure() {
+        fitFrame = 0;
+        if (document.hidden) return;
+        const navHeight = document.querySelector("nav").getBoundingClientRect().height;
+        const usable = innerHeight - navHeight - 48;
+        const sectionRect = section.getBoundingClientRect();
+        const resizedReading = readingSnapshot?.inside && (readingSnapshot.width !== innerWidth || readingSnapshot.height !== innerHeight);
+        const reading = resizedReading || sectionRect.top < navHeight + usable * .65 && sectionRect.bottom > navHeight + usable * .35;
+        let nearest = enhanced && geometry ? resolveIndex(scrollY, false) : 0;
+        if (!enhanced && reading) {
+            nearest = pairs.reduce((best, pair, i) => Math.abs(pair.getBoundingClientRect().top - navHeight - 24) < Math.abs(pairs[best].getBoundingClientRect().top - navHeight - 24) ? i : best, 0);
+        }
+        if (resizedReading) nearest = readingSnapshot.index;
+        const hadFocus = story.contains(document.activeElement);
+        const focusedPair = pairs.findIndex(pair => pair.contains(document.activeElement));
+        if (focusedPair >= 0) nearest = focusedPair;
+        const oldMode = enhanced;
+        if (navigation && geometry && (geometry.width !== innerWidth || geometry.viewportHeight !== innerHeight || motion.matches)) {
+            window.scrollTo({ top: scrollY, behavior: "instant" });
+            finishNavigation();
+        }
+        let fits = baseAvailable && innerWidth >= 1100 && usable >= 520 && !motion.matches;
+        if (fits) {
+            story.hidden = false;
+            story.classList.toggle("results-fit-probe", !enhanced);
+            if (!enhanced) story.inert = true;
+            section.classList.toggle("results-compact", usable < 680);
+            if (intro.parentElement !== stage) stage.prepend(intro);
+            story.style.setProperty("--results-top", `${navHeight + 24}px`);
+            story.style.setProperty("--results-stage-height", `${usable}px`);
+            const headingHeight = intro.getBoundingClientRect().height + parseFloat(getComputedStyle(stage).gap);
+            const captionHeight = story.querySelector(".results-caption").getBoundingClientRect().height + 18;
+            story.style.setProperty("--results-phone-width", `${Math.min(340, (usable - headingHeight - captionHeight - 16) * .505)}px`);
+            const cardHeight = entrance.getBoundingClientRect().height;
+            const phoneHeight = feature.getBoundingClientRect().height;
+            const margin = enhanced ? 4 : 12;
+            fits = Math.max(cardHeight, phoneHeight) + headingHeight + margin <= usable &&
+                cards.every(card => card.scrollWidth <= card.clientWidth + 1) &&
+                captions.scrollWidth <= captions.clientWidth + 1;
+        }
+        if (!fits) {
+            if (enhanced) { cancel(); stopEntrance(); }
+            enhanced = false;
+            story.hidden = true;
+            story.inert = true;
+            story.classList.remove("results-fit-probe");
+            baseline.hidden = false;
+            pairs.forEach(pair => { pair.querySelector(".results-feature").hidden = false; });
+            if (intro.parentElement === stage) story.before(intro);
+            section.classList.remove("results-enhanced", "results-compact");
+            document.documentElement.classList.remove("results-scroll-layout");
+            geometry = null;
+            wasVisible = false;
+            if (oldMode && reading) window.scrollTo({ top: pairs[nearest].getBoundingClientRect().top + scrollY - navHeight - 24, behavior: "instant" });
+            else if (resizedReading) window.scrollTo({ top: pairs[nearest].getBoundingClientRect().top + scrollY - navHeight - 24, behavior: "instant" });
+            if (hadFocus) data[nearest].link.focus({ preventScroll: true });
+            pairedLayout = { width: innerWidth, viewportHeight: innerHeight, top: navHeight + 24,
+                positions: pairs.map(pair => { const rect = pair.getBoundingClientRect(); return { top: rect.top + scrollY, bottom: rect.bottom + scrollY }; }) };
+            rememberReading();
+            return;
+        }
+        enhanced = true;
+        story.inert = false;
+        story.classList.remove("results-fit-probe");
+        baseline.hidden = false;
+        pairs.forEach(pair => { pair.querySelector(".results-feature").hidden = true; });
+        section.classList.add("results-enhanced");
+        document.documentElement.classList.add("results-scroll-layout");
+        const interval = Math.min(440, Math.max(300, usable * .48));
+        story.style.height = `${usable + interval * data.length}px`;
+        const start = story.getBoundingClientRect().top + scrollY - navHeight - 24;
+        const changed = !geometry || geometry.height !== usable || geometry.interval !== interval || geometry.width !== innerWidth;
+        geometry = { start, end: start + interval * data.length, interval, height: usable, viewportHeight: innerHeight, top: navHeight + 24, width: innerWidth };
+        // Start when the composition reaches the viewport, rather than while only
+        // the heading is entering. Cache this with the other measured geometry.
+        geometry.revealStart = start + geometry.top + composition.offsetTop - innerHeight;
+        if (reading && changed && (oldMode || pairedLayout || !restoring)) {
+            window.scrollTo({ top: start + (nearest + .5) * interval, behavior: "instant" });
+            revealed = true;
+        }
+        if (!frame.src) frame.src = "phone4.webp";
+        restoreReading();
+        if (!oldMode || changed) {
+            cancel();
+            desired = -1;
+            select(resolveIndex(scrollY, false), { direct: true });
+        }
+        rememberReading();
+        if (!oldMode && focusedPair >= 0) original.focus({ preventScroll: true });
+        scheduleScroll();
+    }
+    function scheduleFit() { if (!fitFrame && !document.hidden) fitFrame = requestAnimationFrame(measure); }
+    window.addEventListener("scroll", scheduleScroll, { passive: true });
+    window.addEventListener("resize", scheduleFit, { passive: true });
+    motion.addEventListener("change", () => { cancel(); stopEntrance(); measure(); });
+    const resize = new ResizeObserver(scheduleFit);
+    resize.observe(document.querySelector("nav"));
+    resize.observe(document.body);
+    resize.observe(deck);
+    resize.observe(captions);
+    document.fonts?.ready.then(scheduleFit);
+    document.fonts?.addEventListener("loadingdone", scheduleFit);
+    window.addEventListener("pageshow", event => {
+        if (event.persisted) { restoring = true; revealed = true; desired = -1; document.documentElement.classList.add("results-restoring"); }
+        scheduleFit();
+        scheduleScroll();
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            restoreReading();
+            if (enhanced && restoring) onScroll();
+            if (checkpoint || event.persisted) { checkpoint = null; restoring = false; }
+            if (!restoring) document.documentElement.classList.remove("results-restoring");
+        }));
+    });
+    window.addEventListener("popstate", () => { finishNavigation(); restoring = true; revealed = true; desired = -1; scheduleFit(); scheduleScroll(); });
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            finishNavigation();
+            cancel(); stopEntrance(); desired = -1;
+            cancelAnimationFrame(scrollFrame); scrollFrame = 0;
+            cancelAnimationFrame(fitFrame); fitFrame = 0;
+        } else {
+            restoring = true;
+            scheduleFit();
+            scheduleScroll();
+            requestAnimationFrame(() => {
+                if (enhanced) onScroll();
+                if (!checkpoint) restoring = false;
+            });
+        }
+    });
+    measure();
+}
+
 
 // INITIALIZE PAGE INTERACTIONS
 document.addEventListener("DOMContentLoaded", () => {
@@ -1012,7 +1664,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initCareerHighlights();
     initAboutAnimation();
     initSectionReveals();
-    initResultsHeading();
+    initResultsEvidence();
     initContactSection();
 });
 
@@ -1114,9 +1766,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!video) return;
                 const play = canPlay(video, index);
                 // preload=none keeps all reels untouched until this row enters view.
-                video.autoplay = play;
-                if (visible && Math.abs(slots[index]) <= 1) video.preload = "metadata";
-                if (!play) { video.pause(); return; }
+                // Visibility/focus updates must not repeatedly mutate media attributes
+                // or issue redundant pause requests to already-idle decoders.
+                if (video.autoplay !== play) video.autoplay = play;
+                if (visible && Math.abs(slots[index]) <= 1 && video.preload === "none") video.preload = "metadata";
+                if (!play) {
+                    if (!video.paused) video.pause();
+                    return;
+                }
                 if (!video.paused || pendingVideos.has(video)) return;
                 pendingVideos.add(video);
                 video.play().then(() => {
@@ -1302,7 +1959,9 @@ document.addEventListener("DOMContentLoaded", () => {
         carousel.classList.add("work-carousel--ready");
         if ("IntersectionObserver" in window) {
             const observer = new IntersectionObserver(entries => {
-                visible = entries[0].isIntersecting && entries[0].intersectionRatio >= .1;
+                const inView = entries[0].isIntersecting && entries[0].intersectionRatio >= .1;
+                if (visible === inView) return;
+                visible = inView;
                 refresh();
             }, { threshold: [0, .1] });
             observer.observe(track);
@@ -1324,67 +1983,19 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("visibilitychange", refreshAll);
     motion.addEventListener("change", refreshAll);
 
-    // Native dialog supplies Escape, modal focus containment, and inert background.
-    // The original image links remain useful if dialog support or scripting is absent.
-    if (!dialog || typeof dialog.showModal !== "function") return;
-    const lightboxContent = dialog.querySelector(".work-lightbox-content");
-    const expanded = dialog.querySelector(".work-lightbox-image");
-    const viewport = dialog.querySelector(".work-lightbox-viewport");
-    const zoom = dialog.querySelector(".work-lightbox-zoom");
-    let opener;
-    let previousOverflow;
-    function updateFitInset() {
-        if (!dialog.open) return;
-        let inset = 0;
-        if (!viewport.classList.contains("work-lightbox-viewport--zoomed") && expanded.naturalWidth && expanded.naturalHeight) {
-            // object-fit centers the visible pixels inside the height-capped image box.
-            const box = expanded.getBoundingClientRect();
-            const visibleWidth = Math.min(box.width, box.height * expanded.naturalWidth / expanded.naturalHeight);
-            inset = Math.max(0, (box.width - visibleWidth) / 2);
-        }
-        lightboxContent.style.setProperty("--work-lightbox-fit-inset", `${inset}px`);
-    }
-    expanded.addEventListener("load", updateFitInset);
-    const fitObserver = new ResizeObserver(updateFitInset);
-    fitObserver.observe(expanded);
-    section.querySelectorAll(".work-expand").forEach(link => {
-        link.setAttribute("aria-haspopup", "dialog");
-        link.addEventListener("click", event => {
-            if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-            event.preventDefault();
-            const original = link.querySelector("img");
-            expanded.src = original.src;
-            expanded.alt = original.alt;
-            dialog.querySelector("#work-lightbox-description").textContent = original.alt;
-            opener = link;
-            previousOverflow = [document.documentElement.style.overflow, document.body.style.overflow];
-            document.documentElement.style.overflow = "hidden";
-            document.body.style.overflow = "hidden";
-            modalOpen = true;
-            dialog.showModal();
-            updateFitInset();
-            refreshAll();
-        });
-    });
-    zoom.addEventListener("click", () => {
-        const zoomed = viewport.classList.toggle("work-lightbox-viewport--zoomed");
-        zoom.textContent = zoomed ? "Fit image" : "Zoom in";
-        zoom.setAttribute("aria-pressed", String(zoomed));
-        viewport.scrollTo(0, 0);
-        updateFitInset();
-        if (zoomed) viewport.focus({ preventScroll: true });
-    });
-    dialog.querySelector(".work-lightbox-close").addEventListener("click", () => dialog.close());
-    dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
-    dialog.addEventListener("close", () => {
-        document.documentElement.style.overflow = previousOverflow[0];
-        document.body.style.overflow = previousOverflow[1];
-        modalOpen = false;
-        viewport.classList.remove("work-lightbox-viewport--zoomed");
-        zoom.textContent = "Zoom in";
-        zoom.setAttribute("aria-pressed", "false");
-        viewport.scrollTo(0, 0);
-        if (opener) opener.focus({ preventScroll: true });
-        refreshAll();
-    });
+    const viewer = createScreenshotViewer(dialog, open => { modalOpen = open; refreshAll(); });
+    if (!viewer) return;
+    section.querySelectorAll(".work-expand").forEach(link => viewer.bind(link, () => ({
+        src: link.href, alt: link.querySelector("img").alt, title: "Content Management"
+    })));
+    document.querySelectorAll(".results-phone-link").forEach(link => viewer.bind(link, () => {
+        const pair = link.closest(".results-pair");
+        const index = pair ? Array.from(pair.parentElement.children).indexOf(pair) + 1 : null;
+        return {
+            src: link.href,
+            alt: pair ? link.querySelector("img").alt : link.dataset.screenshotDescription,
+            title: pair ? String(index).padStart(2, "0") + " / 06 · " + pair.querySelector("h3").textContent : link.dataset.screenshotTitle,
+            portrait: true
+        };
+    }));
 });

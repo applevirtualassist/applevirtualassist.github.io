@@ -159,7 +159,10 @@
             </h2>
 
             <div class="work-category">
-              <h3 id="work-video-heading" class="work-category-title" data-scroll-reveal>Short-Form Video</h3>
+              <div class="work-category-copy" data-scroll-reveal>
+                <span class="work-chapter" aria-hidden="true">01</span>
+                <h3 id="work-video-heading" class="work-category-title">Short-Form Video</h3>
+              </div>
               <div class="work-carousel" role="region" aria-labelledby="work-video-heading">
                 <div class="work-track" tabindex="0" aria-label="Short-form videos; scroll to explore">
                   <figure class="work-slide">
@@ -187,7 +190,10 @@
             </div>
 
             <div class="work-category">
-              <h3 id="work-design-heading" class="work-category-title" data-scroll-reveal>Social Media Design</h3>
+              <div class="work-category-copy" data-scroll-reveal>
+                <span class="work-chapter" aria-hidden="true">02</span>
+                <h3 id="work-design-heading" class="work-category-title">Social Media Design</h3>
+              </div>
               <div class="work-carousel" role="region" aria-labelledby="work-design-heading">
                 <div class="work-track" tabindex="0" aria-label="Social media designs; scroll to explore">
                   <figure class="work-slide"><img class="work-media" src="SocialMedia1.webp" alt="Blue Chicago's North Shore market update design featuring a realtor and local landmarks" width="1080" height="1920" loading="lazy" decoding="async"></figure>
@@ -201,6 +207,7 @@
 
             <div class="work-category">
               <div class="work-category-copy" data-scroll-reveal>
+                <span class="work-chapter" aria-hidden="true">03</span>
                 <h3 id="work-lead-heading" class="work-category-title">Content Management</h3>
                 <p class="work-category-hint">Click to view the details.</p>
               </div>
@@ -232,37 +239,130 @@
         <!-- Results remain part of My Works for navigation: intentionally not a portfolio-section. -->
         <section id="results-in-numbers" class="results-in-numbers-section" aria-labelledby="results-heading">
           <div class="results-container">
-            <div class="results-stage results-stage--primary">
-              <h2 id="results-heading" class="results-heading" data-scroll-reveal>
+            <header class="results-intro" data-scroll-reveal>
+              <h2 id="results-heading" class="results-heading">
                 <svg class="highlight-flourish" viewBox="0 0 160 48" aria-hidden="true" focusable="false"><path pathLength="1" d="M155 24C124 24 104 36 76 36C48 36 20 29 20 16C20 3 45 3 47 17C49 29 30 32 30 21C30 16 35 13 39 16" /></svg>
                 <span>Results in Numbers</span>
                 <svg class="highlight-flourish highlight-flourish--right" viewBox="0 0 160 48" aria-hidden="true" focusable="false"><path pathLength="1" d="M155 24C124 24 104 36 76 36C48 36 20 29 20 16C20 3 45 3 47 17C49 29 30 32 30 21C30 16 35 13 39 16" /></svg>
               </h2>
-              <div class="results-phones">
-                <div class="results-phone-wrap" data-scroll-reveal>
-                  <img class="results-phone" src="phone1.webp" alt="Instagram analytics: 496,529 views, with 94.8% from non-followers." width="1010" height="2000" loading="lazy" decoding="async">
+            </header>
+            <!-- Complete native pairs are the baseline; desktop enhancement is created only when supported. -->
+            <div class="results-pairs">
+              <article class="results-pair" aria-labelledby="result-title-1">
+                <div class="results-card" data-results-card>
+                  <div class="results-card-content">
+                    <p class="results-card-label">01 / 06 · Client 1 · 90 days</p>
+                    <h3 id="result-title-1" class="results-card-title">Audience Breakdown</h3>
+                    <p class="results-card-metric">496K+</p>
+                    <p class="results-card-unit">views</p>
+                    <p class="results-card-description">90-day audience reach and content visibility overview.</p>
+                  </div>
                 </div>
-                <div class="results-phone-wrap" data-scroll-reveal>
-                  <img class="results-phone" src="phone2.webp" alt="Instagram Insights: 269,288 views, 125 net new followers, and 1,157 interactions." width="1010" height="2000" loading="lazy" decoding="async">
+                <figure class="results-feature">
+                  <a class="results-phone-link" href="phone1.webp" aria-label="View full screenshot for result 1, Audience Breakdown">
+                    <img class="results-pair-phone" src="phone1.webp" alt="90-Day Performance: account analytics showing 496,529 views and 94.8% of views from non-followers." width="1010" height="2000" loading="lazy" decoding="async">
+                    <span class="results-zoom-cue" aria-hidden="true">View full screenshot</span>
+                  </a>
+                  <figcaption class="results-caption"><span>01 / 06 · <span data-results-caption>Audience Breakdown</span></span>
+                  </figcaption>
+                </figure>
+              </article>
+              <article class="results-pair" aria-labelledby="result-title-2">
+                <div class="results-card" data-results-card>
+                  <div class="results-card-content">
+                    <p class="results-card-label">02 / 06 · Client 2 · 90 days</p>
+                    <h3 id="result-title-2" class="results-card-title">Growth &amp; Engagement</h3>
+                    <p class="results-card-metric">269K+</p>
+                    <p class="results-card-unit">views</p>
+                    <p class="results-card-description">Views, interactions, and follower growth across a 90-day period.</p>
+                  </div>
                 </div>
-                <div class="results-phone-wrap" data-scroll-reveal>
-                  <img class="results-phone" src="phone3.webp" alt="Instagram content ranked by views, led by reels with 403.7K and 391.0K views." width="1010" height="2000" loading="lazy" decoding="async">
+                <figure class="results-feature">
+                  <a class="results-phone-link" href="phone2.webp" aria-label="View full screenshot for result 2, Growth &amp; Engagement">
+                    <img class="results-pair-phone" src="phone2.webp" alt="Account Insights: 269,288 views, +125 net followers, and 1,157 interactions across 90 days." width="1010" height="2000" loading="lazy" decoding="async">
+                    <span class="results-zoom-cue" aria-hidden="true">View full screenshot</span>
+                  </a>
+                  <figcaption class="results-caption"><span>02 / 06 · <span data-results-caption>Growth &amp; Engagement</span></span>
+                  </figcaption>
+                </figure>
+              </article>
+              <article class="results-pair" aria-labelledby="result-title-3">
+                <div class="results-card" data-results-card>
+                  <div class="results-card-content">
+                    <p class="results-card-label">03 / 06 · Client 2 · 1-year ranking</p>
+                    <h3 id="result-title-3" class="results-card-title">Content Performance</h3>
+                    <p class="results-card-metric results-card-metric--text">Viral Reels</p>
+                    <p class="results-card-description">Multiple top-performing reels, ranked by views across the account.</p>
+                  </div>
                 </div>
-              </div>
+                <figure class="results-feature">
+                  <a class="results-phone-link" href="phone3.webp" aria-label="View full screenshot for result 3, Content Performance">
+                    <img class="results-pair-phone" src="phone3.webp" alt="Account content overview showing multiple top-performing reels ranked by views over one year." width="1010" height="2000" loading="lazy" decoding="async">
+                    <span class="results-zoom-cue" aria-hidden="true">View full screenshot</span>
+                  </a>
+                  <figcaption class="results-caption"><span>03 / 06 · <span data-results-caption>Viral Reels</span></span>
+                  </figcaption>
+                </figure>
+              </article>
+              <article class="results-pair" aria-labelledby="result-title-4">
+                <div class="results-card" data-results-card>
+                  <div class="results-card-content">
+                    <p class="results-card-label">04 / 06 · Short-Form Video</p>
+                    <h3 id="result-title-4" class="results-card-title">Top Performing Reel #1</h3>
+                    <p class="results-card-metric">831K+</p>
+                    <p class="results-card-unit">views</p>
+                    <p class="results-card-description"><strong>831,185 views on a single reel.</strong> Explore its watch time, interactions, and profile actions.</p>
+                  </div>
+                </div>
+                <figure class="results-feature">
+                  <a class="results-phone-link" href="phone4.webp" aria-label="View full screenshot for result 4, Top Performing Reel #1">
+                    <img class="results-pair-phone" src="phone4.webp" alt="Reel insights showing 831,185 views, over 70 days of watch time, 4,785 interactions, and 549 profile activity." width="1010" height="2000" loading="lazy" decoding="async">
+                    <span class="results-zoom-cue" aria-hidden="true">View full screenshot</span>
+                  </a>
+                  <figcaption class="results-caption"><span>04 / 06 · <span data-results-caption>Top Performing Reel #1</span></span>
+                  </figcaption>
+                </figure>
+              </article>
+              <article class="results-pair" aria-labelledby="result-title-5">
+                <div class="results-card" data-results-card>
+                  <div class="results-card-content">
+                    <p class="results-card-label">05 / 06 · Short-Form Video</p>
+                    <h3 id="result-title-5" class="results-card-title">Top Performing Reel #2</h3>
+                    <p class="results-card-metric">549K+</p>
+                    <p class="results-card-unit">views</p>
+                    <p class="results-card-description">Individual reel performance, including 266,359 accounts reached and 347 follows.</p>
+                  </div>
+                </div>
+                <figure class="results-feature">
+                  <a class="results-phone-link" href="phone5.webp" aria-label="View full screenshot for result 5, Top Performing Reel #2">
+                    <img class="results-pair-phone" src="phone5.webp" alt="Reel summary showing 549,125 views, 266,359 accounts reached, and 347 follows. The original evidence identifies the reel as crossposted to Facebook." width="1010" height="2000" loading="lazy" decoding="async">
+                    <span class="results-zoom-cue" aria-hidden="true">View full screenshot</span>
+                  </a>
+                  <figcaption class="results-caption"><span>05 / 06 · <span data-results-caption>Top Performing Reel #2</span></span>
+                  </figcaption>
+                </figure>
+              </article>
+              <article class="results-pair" aria-labelledby="result-title-6">
+                <div class="results-card" data-results-card>
+                  <div class="results-card-content">
+                    <p class="results-card-label">06 / 06 · Short-Form Video</p>
+                    <h3 id="result-title-6" class="results-card-title">Top Performing Reel #3</h3>
+                    <p class="results-card-metric">403K+</p>
+                    <p class="results-card-unit">views</p>
+                    <p class="results-card-description">Individual reel performance, including 177,896 accounts reached and 301 follows.</p>
+                  </div>
+                </div>
+                <figure class="results-feature">
+                  <a class="results-phone-link" href="phone6.webp" aria-label="View full screenshot for result 6, Top Performing Reel #3">
+                    <img class="results-pair-phone" src="phone6.webp" alt="Reel insights showing 403,729 views, 177,896 accounts reached, and 301 follows." width="1010" height="2000" loading="lazy" decoding="async">
+                    <span class="results-zoom-cue" aria-hidden="true">View full screenshot</span>
+                  </a>
+                  <figcaption class="results-caption"><span>06 / 06 · <span data-results-caption>Top Performing Reel #3</span></span>
+                  </figcaption>
+                </figure>
+              </article>
             </div>
-            <div class="results-stage results-stage--secondary">
-              <div class="results-phones">
-                <div class="results-phone-wrap" data-scroll-reveal>
-                  <img class="results-phone" src="phone4.webp" alt="Reel insights: 831,185 views, over 70 days of watch time, 4,785 interactions, and 549 profile actions." width="1010" height="2000" loading="lazy" decoding="async">
-                </div>
-                <div class="results-phone-wrap" data-scroll-reveal>
-                  <img class="results-phone" src="phone5.webp" alt="Reel insights: 549,125 views, 266,359 accounts reached, and 347 follows." width="1010" height="2000" loading="lazy" decoding="async">
-                </div>
-                <div class="results-phone-wrap" data-scroll-reveal>
-                  <img class="results-phone" src="phone6.webp" alt="Reel insights: 403,729 views, 177,896 accounts reached, and 301 follows." width="1010" height="2000" loading="lazy" decoding="async">
-                </div>
-              </div>
-            </div>
+            <p class="results-status" role="status" aria-live="polite" aria-atomic="true"></p>
           </div>
         </section>
     <section id="services" class="services-section portfolio-section">
