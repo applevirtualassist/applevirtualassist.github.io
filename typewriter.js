@@ -1101,6 +1101,7 @@ function initResultsEvidence() {
         image: pair.querySelector("img"),
         link: pair.querySelector("a")
     }));
+    const total = String(data.length).padStart(2, "0");
     const story = document.createElement("div");
     story.className = "results-story";
     story.hidden = true;
@@ -1173,7 +1174,7 @@ function initResultsEvidence() {
         const caption = document.createElement("span");
         const count = document.createElement("span");
         count.dataset.resultsCount = "";
-        count.textContent = `${number(index)} / 06`;
+        count.textContent = `${number(index)} / ${total}`;
         const captionTitle = document.createElement("span");
         captionTitle.textContent = item.caption;
         caption.append(count, captionTitle);
@@ -1192,6 +1193,7 @@ function initResultsEvidence() {
     let enhanced = false, committed = -1, desired = -1, front = 0, unavailable = false;
     let revision = 0, animations = [], screenAnimations = [], entranceAnimations = [], revealed = false;
     let displayed = -1;
+    let loadingTimer = 0, loadingHoldTimer = 0, loadingShownAt = null, releaseLoading = null;
     let headingStartedAt = null, waitingForHeading = false;
     let navigation = null, navigationTimer = 0;
     let geometry = null, scrollFrame = 0, fitFrame = 0, wasVisible = false;
@@ -1281,10 +1283,20 @@ function initResultsEvidence() {
             screen.style.willChange = "";
         });
     }
+    function clearLoading() {
+        clearTimeout(loadingTimer);
+        clearTimeout(loadingHoldTimer);
+        loadingTimer = loadingHoldTimer = 0;
+        loadingShownAt = null;
+        loading.hidden = true;
+        // Release an obsolete minimum-duration wait as well as cancelling its timer.
+        releaseLoading?.();
+        releaseLoading = null;
+    }
     function cancel(preserve = false) {
         revision++;
         if (!preserve) { settleCards(); settleScreens(); }
-        loading.hidden = true;
+        clearLoading();
         feature.setAttribute("aria-busy", "false");
     }
     function labels(index, failed, evidenceReady = true) {
@@ -1300,7 +1312,7 @@ function initResultsEvidence() {
         original.href = data[index].link.href;
         error.querySelector("a").href = original.href;
         original.setAttribute("aria-label", data[index].link.getAttribute("aria-label"));
-        phone.dataset.screenshotTitle = `${number(index)} / 06 · ${data[index].title}`;
+        phone.dataset.screenshotTitle = `${number(index)} / ${total} · ${data[index].title}`;
         phone.dataset.screenshotDescription = data[index].image.alt;
         if (evidenceReady) {
             phone.classList.toggle("is-unavailable", failed);
@@ -1330,11 +1342,17 @@ function initResultsEvidence() {
             return;
         }
         loading.textContent = `Loading result ${number(index)}…`;
-        loading.hidden = false;
         feature.setAttribute("aria-busy", "true");
+        loadingTimer = setTimeout(() => {
+            loadingTimer = 0;
+            if (ticket !== revision || !enhanced || document.hidden) return;
+            loadingShownAt = performance.now();
+            loading.hidden = false;
+        }, 1300);
         let failed = false;
         try { await Promise.all([ready(index), frame.decode()]); } catch { failed = true; }
         if (ticket !== revision || !enhanced || document.hidden) return;
+        if (failed) clearLoading();
         // A cached reload may restore scroll between decoding and the first scroll frame.
         if (restoring && geometry && scrollY >= geometry.start && scrollY <= geometry.end) {
             const restoredIndex = resolveIndex(scrollY, false);
@@ -1397,7 +1415,21 @@ function initResultsEvidence() {
             try { await screens[destination].decode(); } catch { failed = true; cache.delete(index); }
         }
         if (ticket !== revision || !enhanced || document.hidden) return;
-        loading.hidden = true;
+        clearTimeout(loadingTimer);
+        loadingTimer = 0;
+        // Fast evidence never waits. Only a pill that was shown gets a brief hold;
+        // errors bypass it, and cancellation releases the wait with an obsolete ticket.
+        if (!failed && loadingShownAt !== null) {
+            const remaining = 280 - (performance.now() - loadingShownAt);
+            if (remaining > 0) {
+                await new Promise(resolve => {
+                    releaseLoading = resolve;
+                    loadingHoldTimer = setTimeout(resolve, remaining);
+                });
+                if (ticket !== revision || !enhanced || document.hidden) return;
+            }
+        }
+        clearLoading();
         unavailable = failed;
         if (!failed) {
             const dissolve = !direct && displayed >= 0 && displayed !== index && wasVisible && !phone.classList.contains("is-unavailable");
@@ -1418,7 +1450,7 @@ function initResultsEvidence() {
         if (!failed && error.contains(document.activeElement)) original.focus({ preventScroll: true });
         feature.setAttribute("aria-busy", "false");
         if (failed) status.textContent = `Result ${index + 1}: ${data[index].title}. Evidence unavailable. Retry or use the full screenshot link.`;
-        else if (explicit) status.textContent = `Result ${index + 1} of 6: ${data[index].title}. ${data[index].metric}${data[index].unit ? " " + data[index].unit : ""}.`;
+        else if (explicit) status.textContent = `Result ${index + 1} of ${data.length}: ${data[index].title}. ${data[index].metric}${data[index].unit ? " " + data[index].unit : ""}.`;
         await Promise.allSettled(screenAnimations.map(animation => animation.finished));
         if (ticket === revision) settleScreens();
         await exchange;
@@ -2032,7 +2064,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return {
             src: link.href,
             alt: pair ? link.querySelector("img").alt : link.dataset.screenshotDescription,
-            title: pair ? String(index).padStart(2, "0") + " / 06 · " + pair.querySelector("h3").textContent : link.dataset.screenshotTitle,
+            title: pair ? String(index).padStart(2, "0") + " / " + String(pair.parentElement.children.length).padStart(2, "0") + " · " + pair.querySelector("h3").textContent : link.dataset.screenshotTitle,
             portrait: true
         };
     }));

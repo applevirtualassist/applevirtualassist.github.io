@@ -1840,7 +1840,7 @@ html.results-scroll-layout.results-restoring { scroll-behavior: auto; }
 .results-stage .results-intro { flex: none; margin: 0; }
 .results-stage .results-heading { font-size: clamp(1.5rem, 1.1rem + 1vw, 2rem); }
 .results-composition { display: grid; grid-template-columns: minmax(0, 1.13fr) minmax(0, .87fr); align-items: center; gap: clamp(48px, 5vw, 96px); min-height: 0; }
-/* Keep all six semantic articles readable by assistive technology in enhanced mode.
+/* Keep all semantic articles readable by assistive technology in enhanced mode.
    Only the redundant baseline figures and the decorative cloned deck are excluded. */
 .results-enhanced .results-pairs { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: normal; }
 .results-entrance, .results-hover { min-width: 0; }
