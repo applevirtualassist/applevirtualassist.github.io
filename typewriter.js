@@ -1645,8 +1645,9 @@ function initResultsEvidence() {
             document.documentElement.classList.remove("results-scroll-layout");
             geometry = null;
             wasVisible = false;
+            // Only leaving enhanced mode needs mapping into the native pairs.
+            // Same-mode remeasurement refreshes the snapshot below without scrolling.
             if (oldMode && reading) window.scrollTo({ top: pairs[nearest].getBoundingClientRect().top + scrollY - navHeight - 24, behavior: "instant" });
-            else if (resizedReading) window.scrollTo({ top: pairs[nearest].getBoundingClientRect().top + scrollY - navHeight - 24, behavior: "instant" });
             if (hadFocus) data[nearest].link.focus({ preventScroll: true });
             pairedLayout = { width: innerWidth, viewportHeight: innerHeight, top: navHeight + 24,
                 positions: pairs.map(pair => { const rect = pair.getBoundingClientRect(); return { top: rect.top + scrollY, bottom: rect.bottom + scrollY }; }) };
