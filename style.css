@@ -1877,6 +1877,13 @@ html.results-scroll-layout.results-restoring { scroll-behavior: auto; }
 .results-compact .results-stack { padding-top: 40px; }
 .results-compact .results-back { height: 48px; padding-block: 3px; font-size: .75rem; }
 .results-compact .results-back--near { top: 20px; }
+/* A second measured fit pass for short laptop windows; retain all text sizes. */
+.results-compact--tight .results-stage { gap: 18px; }
+.results-compact--tight .results-deck .results-card { padding-block: 20px; }
+.results-compact--tight .results-card-label { margin-bottom: 16px; }
+.results-compact--tight .results-card-title { margin-bottom: 18px; }
+.results-compact--tight .results-card-description { margin-top: 20px; padding-top: 16px; }
+.results-compact--tight .results-next-row { padding-block: 12px 6px; }
 .results-fit-probe { position: absolute; top: 0; left: 0; right: 0; visibility: hidden; pointer-events: none; }
 .results-fit-probe * { visibility: hidden !important; }
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {

@@ -50,7 +50,8 @@ function initCareerHighlights() {
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     // The HTML already contains the final, accessible values.
-    if (motionQuery.matches || !("IntersectionObserver" in window)) return;
+    if (motionQuery.matches || !("IntersectionObserver" in window) ||
+        !window.requestAnimationFrame || !window.cancelAnimationFrame) return;
     section.classList.add("career-highlights--ink-ready");
 
     const entranceElements = Array.from(section.querySelectorAll("[data-aos]"));
@@ -1609,28 +1610,41 @@ function initResultsEvidence() {
         const focusedPair = pairs.findIndex(pair => pair.contains(document.activeElement));
         if (focusedPair >= 0) nearest = focusedPair;
         const oldMode = enhanced;
-        if (navigation && geometry && (geometry.width !== innerWidth || geometry.viewportHeight !== innerHeight || motion.matches)) {
+        if (navigation && geometry && (geometry.width !== innerWidth || geometry.viewportHeight !== innerHeight || motion.matches || !pointerHover.matches)) {
             window.scrollTo({ top: scrollY, behavior: "instant" });
             finishNavigation();
         }
-        let fits = baseAvailable && innerWidth >= 1100 && usable >= 520 && !motion.matches;
+        // CSS viewport dimensions and the primary input gate the probe; rendered fit
+        // decides the mode. A wide touch-first tablet still uses the native pairs.
+        let fits = baseAvailable && pointerHover.matches && innerWidth >= 1024 && usable >= 520 && !motion.matches;
         if (fits) {
             story.hidden = false;
             story.classList.toggle("results-fit-probe", !enhanced);
             if (!enhanced) story.inert = true;
             section.classList.toggle("results-compact", usable < 680);
+            section.classList.remove("results-compact--tight");
             if (intro.parentElement !== stage) stage.prepend(intro);
             story.style.setProperty("--results-top", `${navHeight + 24}px`);
             story.style.setProperty("--results-stage-height", `${usable}px`);
-            const headingHeight = intro.getBoundingClientRect().height + parseFloat(getComputedStyle(stage).gap);
-            const captionHeight = story.querySelector(".results-caption").getBoundingClientRect().height + 18;
-            story.style.setProperty("--results-phone-width", `${Math.min(340, (usable - headingHeight - captionHeight - 16) * .505)}px`);
-            const cardHeight = entrance.getBoundingClientRect().height;
-            const phoneHeight = feature.getBoundingClientRect().height;
-            const margin = enhanced ? 4 : 12;
-            fits = Math.max(cardHeight, phoneHeight) + headingHeight + margin <= usable &&
-                cards.every(card => card.scrollWidth <= card.clientWidth + 1) &&
-                captions.scrollWidth <= captions.clientWidth + 1;
+            function compositionFits() {
+                const headingHeight = intro.getBoundingClientRect().height + parseFloat(getComputedStyle(stage).gap);
+                const caption = story.querySelector(".results-caption");
+                const captionHeight = caption.getBoundingClientRect().height + parseFloat(getComputedStyle(caption).marginTop);
+                story.style.setProperty("--results-phone-width", `${Math.min(340, (usable - headingHeight - captionHeight - 16) * .505)}px`);
+                const cardHeight = entrance.getBoundingClientRect().height;
+                const phoneHeight = feature.getBoundingClientRect().height;
+                const margin = enhanced ? 4 : 12;
+                return Math.max(cardHeight, phoneHeight) + headingHeight + margin <= usable &&
+                    phone.getBoundingClientRect().width >= 180 &&
+                    [intro, composition, ...cards, captions].every(element => element.scrollWidth <= element.clientWidth + 1);
+            }
+            fits = compositionFits();
+            // Keep the approved spacing wherever it fits. Short laptop windows get
+            // one spacing-only compact probe before falling back to normal flow.
+            if (!fits && usable < 680) {
+                section.classList.add("results-compact--tight");
+                fits = compositionFits();
+            }
         }
         if (!fits) {
             if (enhanced) { cancel(); stopEntrance(); }
@@ -1641,7 +1655,7 @@ function initResultsEvidence() {
             baseline.hidden = false;
             pairs.forEach(pair => { pair.querySelector(".results-feature").hidden = false; });
             if (intro.parentElement === stage) story.before(intro);
-            section.classList.remove("results-enhanced", "results-compact");
+            section.classList.remove("results-enhanced", "results-compact", "results-compact--tight");
             document.documentElement.classList.remove("results-scroll-layout");
             geometry = null;
             wasVisible = false;
@@ -1688,6 +1702,7 @@ function initResultsEvidence() {
     window.addEventListener("scroll", scheduleScroll, { passive: true });
     window.addEventListener("resize", scheduleFit, { passive: true });
     motion.addEventListener("change", () => { cancel(); stopEntrance(); measure(); });
+    pointerHover.addEventListener("change", scheduleFit);
     const resize = new ResizeObserver(scheduleFit);
     resize.observe(document.querySelector("nav"));
     resize.observe(document.body);
